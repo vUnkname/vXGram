@@ -75,7 +75,7 @@ public final class XrayOutboundUrlParser {
         return info;
     }
 
-    private static SharedConfig.ProxyInfo fromVmess(String url) {
+    private static SharedConfig.ProxyInfo fromVmess(String url) throws Exception {
         String payload = url.substring("vmess://".length());
         int hashIdx = payload.indexOf('#');
         String encoded = hashIdx >= 0 ? payload.substring(0, hashIdx) : payload;
@@ -126,7 +126,7 @@ public final class XrayOutboundUrlParser {
         return generic(address, port, remark, outbound);
     }
 
-    private static SharedConfig.ProxyInfo fromTrojan(String url) {
+    private static SharedConfig.ProxyInfo fromTrojan(String url) throws Exception {
         Uri uri = Uri.parse(url);
         String password = uri.getUserInfo();
         String address = uri.getHost();
@@ -165,7 +165,7 @@ public final class XrayOutboundUrlParser {
         return generic(address, port, remark, outbound);
     }
 
-    private static SharedConfig.ProxyInfo fromShadowsocks(String url) {
+    private static SharedConfig.ProxyInfo fromShadowsocks(String url) throws Exception {
         String withoutScheme = url.substring("ss://".length());
         String remark = "";
         int hashIdx = withoutScheme.indexOf('#');
@@ -214,7 +214,7 @@ public final class XrayOutboundUrlParser {
         return generic(host, port, remark, outbound);
     }
 
-    private static SharedConfig.ProxyInfo fromSocks(String url) {
+    private static SharedConfig.ProxyInfo fromSocks(String url) throws Exception {
         Uri uri = Uri.parse(url.replace("socks5://", "socks://"));
         String address = uri.getHost();
         int port = uri.getPort() > 0 ? uri.getPort() : 1080;
@@ -247,7 +247,7 @@ public final class XrayOutboundUrlParser {
         return generic(address, port, remark, outbound);
     }
 
-    private static SharedConfig.ProxyInfo fromHttpProxy(String url) {
+    private static SharedConfig.ProxyInfo fromHttpProxy(String url) throws Exception {
         Uri uri = Uri.parse(url);
         String address = uri.getHost();
         int port = uri.getPort() > 0 ? uri.getPort() : ("https".equalsIgnoreCase(uri.getScheme()) ? 443 : 80);
@@ -280,7 +280,7 @@ public final class XrayOutboundUrlParser {
         return generic(address, port, remark, outbound);
     }
 
-    private static SharedConfig.ProxyInfo fromWireGuard(String url) {
+    private static SharedConfig.ProxyInfo fromWireGuard(String url) throws Exception {
         Uri uri = Uri.parse(url);
         String privateKey = uri.getUserInfo();
         String address = uri.getQueryParameter("address");
@@ -308,15 +308,15 @@ public final class XrayOutboundUrlParser {
         return generic(host, port, remark, outbound);
     }
 
-    private static SharedConfig.ProxyInfo fromHysteria2(String url) {
+    private static SharedConfig.ProxyInfo fromHysteria2(String url) throws Exception {
         return fromHysteriaFamily(url, "hysteria2");
     }
 
-    private static SharedConfig.ProxyInfo fromHysteria(String url) {
+    private static SharedConfig.ProxyInfo fromHysteria(String url) throws Exception {
         return fromHysteriaFamily(url, "hysteria");
     }
 
-    private static SharedConfig.ProxyInfo fromHysteriaFamily(String url, String protocol) {
+    private static SharedConfig.ProxyInfo fromHysteriaFamily(String url, String protocol) throws Exception {
         Uri uri = Uri.parse(url);
         String password = uri.getUserInfo();
         String host = uri.getHost();
@@ -345,7 +345,7 @@ public final class XrayOutboundUrlParser {
         return generic(host, port, remark, outbound);
     }
 
-    private static void applyTransport(JSONObject stream, String network, String host, String path, String headerType) {
+    private static void applyTransport(JSONObject stream, String network, String host, String path, String headerType) throws Exception {
         if ("ws".equalsIgnoreCase(network)) {
             JSONObject ws = new JSONObject();
             if (!TextUtils.isEmpty(path)) {
