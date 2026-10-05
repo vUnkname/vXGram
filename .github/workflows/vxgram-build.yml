@@ -1,4 +1,4 @@
-# Manual vXGram build (all normal staging APKs: per-ABI + universal).
+# Manual vXGram build: normal + plugin staging APKs (per-ABI; normal also includes universal).
 # Runs entirely on GitHub Actions — no local JDK required.
 name: vXGram build
 
@@ -27,7 +27,7 @@ env:
 
 jobs:
   build:
-    name: Gradle Build (normal staging)
+    name: Gradle Build (normal + plugin staging)
     runs-on: ubuntu-latest
     timeout-minutes: 360
     steps:
@@ -37,7 +37,7 @@ jobs:
           submodules: recursive
 
       - name: Set up JDK 21
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: '21'
@@ -83,14 +83,29 @@ jobs:
       - name: Configure Android SDK Path
         run: echo "sdk.dir=${ANDROID_HOME}" >> local.properties
 
-      - name: Gradle JVM args (large runners)
+      - name: Tune Gradle for CI (memory and stability)
         run: |
           MEMORY_KB=$(awk '/MemTotal/ {print $2}' /proc/meminfo)
           MEMORY_GB=$((MEMORY_KB / 1024 / 1024))
+          echo "Runner RAM: ${MEMORY_GB}GB"
           if [ "$MEMORY_GB" -ge 12 ]; then
-            sed -i '/^org\.gradle\.jvmargs=/d' gradle.properties
-            echo "org.gradle.jvmargs=-Xmx8G -XX:MaxMetaspaceSize=2G -XX:+UseParallelGC -XX:+HeapDumpOnOutOfMemoryError -Dfile.encoding=UTF-8" >> gradle.properties
+            HEAP=8G
+            META=2G
+          elif [ "$MEMORY_GB" -ge 7 ]; then
+            HEAP=6G
+            META=1536m
+          else
+            HEAP=4G
+            META=1024m
           fi
+          sed -i '/^org\.gradle\.jvmargs=/d' gradle.properties
+          sed -i '/^org\.gradle\.configuration-cache=/d' gradle.properties
+          sed -i '/^org\.gradle\.parallel=/d' gradle.properties
+          {
+            echo "org.gradle.jvmargs=-Xmx${HEAP} -XX:MaxMetaspaceSize=${META} -XX:+UseParallelGC -XX:+HeapDumpOnOutOfMemoryError -Dfile.encoding=UTF-8"
+            echo "org.gradle.configuration-cache=false"
+            echo "org.gradle.parallel=true"
+          } >> gradle.properties
 
       - name: Build vXGram APKs
         env:
@@ -101,17 +116,25 @@ jobs:
           GITHUB_TOKEN: ${{ github.token }}
         run: |
           chmod +x gradlew
-          ./gradlew TMessagesProj:assembleNormalStaging --stacktrace
+          ./gradlew TMessagesProj:assembleStaging --stacktrace
 
       - name: List APK outputs
         run: |
           find TMessagesProj/build/outputs/apk/normal/staging -name '*.apk' -exec ls -la {} \;
+          find TMessagesProj/build/outputs/apk/plugin/staging -name '*.apk' -exec ls -la {} \;
 
-      - name: Upload APK artifacts
+      - name: Upload normal APK artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: vXGram-apks-${{ github.sha }}
+          name: vXGram-normal-apks-${{ github.sha }}
           path: TMessagesProj/build/outputs/apk/normal/staging/*.apk
+          if-no-files-found: error
+
+      - name: Upload plugin APK artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: vXGram-plugin-apks-${{ github.sha }}
+          path: TMessagesProj/build/outputs/apk/plugin/staging/*.apk
           if-no-files-found: error
 
       - name: Publish GitHub Release
@@ -120,5 +143,7 @@ jobs:
         with:
           tag_name: ${{ inputs.release_tag != '' && inputs.release_tag || format('vxgram-{0}', github.sha) }}
           name: vXGram build ${{ github.sha }}
-          files: TMessagesProj/build/outputs/apk/normal/staging/*.apk
+          files: |
+            TMessagesProj/build/outputs/apk/normal/staging/*.apk
+            TMessagesProj/build/outputs/apk/plugin/staging/*.apk
           generate_release_notes: true

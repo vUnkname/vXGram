@@ -1,10 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="NagramX" translatable="false">Nagram X</string>
-    <string name="XChannel">Nagram X Channel</string>
-    <string name="NagramXForkChannel">Nagram XF Channel</string>
+    <string name="NagramX" translatable="false">vXGram</string>
+    <string name="XChannel">vXGram Channel</string>
+    <string name="NagramXForkChannel">vXGram Channel</string>
+    <string name="VXGramChannel">vXGram Channel</string>
     <string name="JoinOfficialChannelTitle">Join Official Channel</string>
-    <string name="JoinOfficialChannelMessage">Welcome to Nagram X! Would you like to join the official channel @NagramXF to get the latest updates and news?</string>
+    <string name="JoinOfficialChannelMessage">Welcome to vXGram! Would you like to join the official channel @vXGramOffical for updates?</string>
     <string name="EnableSaveDeletedMessages">Save Deleted Messages</string>
     <string name="OnceVideoMessageNote">This video message will be kept after viewing.</string>
     <string name="OncePhotoMessageNote">This photo message will be kept after viewing.</string>
@@ -249,7 +250,7 @@
     <string name="CopySticker">Copy Sticker</string>
     <string name="NaxAboutInfo">Info</string>
     <string name="NaxLinks">Links</string>
-    <string name="NaxAboutDesc">A fork of Nagram X with additional features. Includes most features from exteraGram and AyuGram.</string>
+    <string name="NaxAboutDesc">Telegram for Android with integrated Xray and Aether proxy support.</string>
     <string name="CheckUpdate">Check for Updates</string>
     <string name="AutoCheckUpdateOFF">OFF</string>
     <string name="AutoCheckUpdateSwitch">Update Channel</string>
@@ -350,8 +351,8 @@
     <string name="BackAnimationSpring">Spring</string>
     <string name="BackAnimationPredictive">Predictive</string>
     <string name="AddToFilter">Add to Filter</string>
-    <string name="UnifiedPushNeverReceivedNotifications">You never received notifications with UnifiedPush since Nagram X was started.</string>
-    <string name="UnifiedPushLastReceivedNotification">The last received notification with UnifiedPush was %1$d seconds ago.\n\nYou received %2$d notifications since Nagram X was started.</string>
+    <string name="UnifiedPushNeverReceivedNotifications">You never received notifications with UnifiedPush since vXGram was started.</string>
+    <string name="UnifiedPushLastReceivedNotification">The last received notification with UnifiedPush was %1$d seconds ago.\n\nYou received %2$d notifications since vXGram was started.</string>
     <string name="UnifiedPushCurrentEndpoint">The current UnifiedPush endpoint is: %1$s</string>
     <string name="PlayOnce">Play once</string>
     <string name="SwitchAccountNax">Switch Account</string>

@@ -25,5 +25,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "NagramX"
+rootProject.name = "vXGram"
 include ':TMessagesProj'

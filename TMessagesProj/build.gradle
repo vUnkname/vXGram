@@ -29,9 +29,10 @@ idea {
 }
 
 def buildTimestamp = System.getenv('BUILD_TIMESTAMP') ?: '0'
-def commitId = System.getenv('COMMIT_ID')
-def verName = "${APP_VERSION_NAME}${commitId?.take(7) ? "-${commitId.take(7)}" : ''}"
-def verCode = 1251
+def vxVersionName = VX_VERSION_NAME
+def vxVersionCode = VX_VERSION_CODE.toInteger()
+def verName = "${APP_VERSION_NAME}-vX.${vxVersionName}"
+def verCode = APP_VERSION_CODE.toInteger() * 100 + vxVersionCode
 
 def officialVer = APP_VERSION_NAME
 def officialCode = APP_VERSION_CODE
@@ -59,6 +60,10 @@ if (properties != null) {
 keystorePwd = keystorePwd ?: System.getenv('KEYSTORE_PASS')
 alias = alias ?: System.getenv('ALIAS_NAME')
 pwd = pwd ?: System.getenv('ALIAS_PASS')
+// CI / local builds without local.properties: use repo dummy keystore from gradle.properties
+keystorePwd = keystorePwd ?: project.findProperty('RELEASE_STORE_PASSWORD')
+alias = alias ?: project.findProperty('RELEASE_KEY_ALIAS')
+pwd = pwd ?: project.findProperty('RELEASE_KEY_PASSWORD')
 
 def nativeTarget = System.getenv('NATIVE_TARGET') ?: ''
 // Plugin package is arm-only: shadowhook doesn't support x86.
@@ -633,19 +638,12 @@ androidComponents {
                 def abi = output.filters.find { it.filterType.name() == 'ABI' }?.identifier
                 output.enabled.set(pluginAbis.contains(abi))
             }
+            def abi = output.filters.find { it.filterType.name() == 'ABI' }?.identifier
+            def suffix = abi != null ? abi : 'universal'
             if (!isPluginFlavor) {
-                def abi = output.filters.find { it.filterType.name() == 'ABI' }?.identifier
-                def suffix = abi != null ? abi : 'universal'
                 output.outputFileName.set("vXGram-${verName}-${suffix}.apk")
             } else {
-                String gramName = 'NagramXF'
-                String first = String.format('%s-v%s(%s)', gramName, verName, verCode)
-                output.outputFileName.set(
-                    output.outputFileName.get()
-                        .replace('TMessagesProj', first)
-                        .replace('-release', '')
-                        .replace('-staging', '')
-                )
+                output.outputFileName.set("vXGram-${verName}-plugin-${suffix}.apk")
             }
         }
         tasks.matching {

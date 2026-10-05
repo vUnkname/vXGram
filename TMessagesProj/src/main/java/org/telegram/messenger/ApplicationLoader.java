@@ -373,7 +373,7 @@ public class ApplicationLoader extends Application {
                         }
                         break;
                 }
-                FileLog.d("buildVersion = " + String.format(Locale.US, "v%s (%d[%d]) %s", info.versionName, info.versionCode / 10, info.versionCode % 10, abi));
+                FileLog.d("buildVersion = " + String.format(Locale.US, "v%s (%d) %s", info.versionName, info.versionCode, abi));
             } catch (Exception e) {
                 FileLog.e(e);
             }

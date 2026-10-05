@@ -72,10 +72,10 @@
     <string name="CallTo">Call to **%1$s**?</string>
     <string name="DisableNumberRounding">Disable Number Rounding</string>
     <string name="Categories">Categories</string>
-    <string name="OfficialChannel">Nagram Channel</string>
+    <string name="OfficialChannel">vXGram Channel</string>
     <string name="About">About</string>
-    <string name="VXCreditsTitle">Credits &amp; upstream projects</string>
-    <string name="VXCreditsNagramXF">Based on **NagramXF** by Keeperorowner — https://github.com/Keeperorowner/NagramXF</string>
+    <string name="VXCreditsTitle">Credits</string>
+    <string name="VXCreditsNagramXF">**vXGram** — https://github.com/vUnkname/vXGram</string>
     <string name="VXCreditsAether">**Aether** core by CluvexStudio — https://github.com/CluvexStudio/Aether</string>
     <string name="VXCreditsXray">**Xray-core** by patterniha — https://github.com/patterniha/Xray-core</string>
     <string name="IgnoreBlockedAbout">You\'ll no longer see messages from blocked users in groups.</string>
@@ -277,7 +277,7 @@
     <string name="Chat">Chats</string>
     <string name="Appearance">Appearance</string>
     <string name="Donate">Donate</string>
-    <string name="DonateDesc">If you like Nagram XF, please consider supporting development.</string>
+    <string name="DonateDesc">If you like vXGram, please consider supporting development.</string>
     <string name="DonateAfdian">Afdian</string>
     <string name="DonateKoFi">Ko-fi</string>
     <string name="DonateInfo">Like this client? **Support development**</string>
