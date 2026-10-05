@@ -1,6 +1,6 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="NekoSettings">N-设置</string>
+    <string name="NekoSettings">vX 设置</string>
     <string name="IPv6">偏好 IPv6</string>
     <string name="MessageMenu">消息菜单</string>
     <string name="HidePhone">隐藏手机号码</string>
@@ -72,7 +72,7 @@
     <string name="CallTo">呼叫 **%1$s**？</string>
     <string name="DisableNumberRounding">禁用数字舍入</string>
     <string name="Categories">类别</string>
-    <string name="OfficialChannel">Nagram 频道</string>
+    <string name="OfficialChannel">vXGram 频道</string>
     <string name="About">关于</string>
     <string name="IgnoreBlockedAbout">您将不会再看到被屏蔽的用户在群组中的消息。</string>
     <string name="SourceCode">源代码</string>
@@ -111,10 +111,10 @@
     <string name="DatacenterStatus">数据中心状态</string>
     <string name="enhancedFileLoader">下载加速</string>
     <string name="MapProviderOpenFreeMap">使用 OpenFreeMap 替代 Google 地图</string>
-    <string name="UnknownNekoSettingsOption">找不到这个 N-设置 选项。</string>
+    <string name="UnknownNekoSettingsOption">找不到这个 vX 设置 选项。</string>
     <string name="PasscodeNeeded">您必须先启用密码锁</string>
     <string name="PasscodeNeko">锁定码</string>
-    <string name="PasscodeShowInSettings">在 N-设置 中显示</string>
+    <string name="PasscodeShowInSettings">在 vX 设置 中显示</string>
     <string name="PasscodeShowInSettingsAbout">隐藏后，您**只能**通过该链接打开此页面：</string>
     <string name="PasscodeSet">设置锁定码</string>
     <string name="PasscodeEdit">更改锁定码</string>
@@ -152,7 +152,7 @@
     <string name="ClearRecentChats">清除最近聊天</string>
     <string name="ClearRecentChatAlert">您确定要清除您的最近聊天吗？</string>
     <string name="CloudConfig">云同步</string>
-    <string name="CloudConfigDesc">保存 N-设置 到 Telegram 云。</string>
+    <string name="CloudConfigDesc">保存 vX 设置 到 Telegram 云。</string>
     <string name="CloudConfigSyncDate">最后同步：%s，云端：%s</string>
     <string name="CloudConfigSyncDateNever">从未</string>
     <string name="CloudConfigSync">同步到云端</string>
@@ -161,7 +161,7 @@
     <string name="CloudConfigRestoreShort">恢复</string>
     <string name="CloudConfigSyncing">正在同步...</string>
     <string name="CloudConfigAutoSync">自动同步</string>
-    <string name="CloudConfigAutoSyncDesc">修改N-设置后自动同步到云端。</string>
+    <string name="CloudConfigAutoSyncDesc">修改vX 设置后自动同步到云端。</string>
     <string name="CloudConfigSyncFailed">无法将设置同步到云端</string>
     <string name="CloudConfigRestoreFailed">无法从云端恢复设置</string>
     <string name="CopyCallback">复制回调数据</string>
@@ -192,7 +192,7 @@
     <string name="ShowIdAndDc">在个人资料中显示 ID/ DC</string>
     <string name="UseDefaultTheme">使用默认主题 *</string>
     <string name="DialogsSettings">聊天列表</string>
-    <string name="NagramXPushService">推送服务</string>
+    <string name="VXGramPushService">推送服务</string>
     <string name="DisableSystemAccount">禁用系统帐户</string>
     <string name="FilterMenu">分类菜单</string>
     <string name="DisableProxyWhenVpnEnabled">启用 VPN 时禁用代理</string>
@@ -240,7 +240,7 @@
     <string name="BackupSettings">备份设置</string>
     <string name="ImportSettings">导入设置</string>
     <string name="ImportSettingsAlert">确定要覆盖设置吗？从未知来源导入设置可能导致锁定码被覆盖从而导致应用被锁定。</string>
-    <string name="nekoXPaymentRemovedToast">支付功能已被移除。</string>
+    <string name="vxGramPaymentRemovedToast">支付功能已被移除。</string>
     <string name="unreadBadgeOnBackButton">聊天窗口返回按钮上显示未读数</string>
     <string name="DeleteDownloadedFileConfirm">从本地缓存中删除此文件？</string>
     <string name="DeleteDownloadedFileSucceed">已删除</string>
@@ -271,7 +271,7 @@
     <string name="Chat">聊天</string>
     <string name="Appearance">外观</string>
     <string name="Donate">赞助</string>
-    <string name="DonateDesc">如果你喜欢 Nagram XF，请考虑支持开发。</string>
+    <string name="DonateDesc">如果你喜欢 vXGram，请考虑支持开发。</string>
     <string name="DonateAfdian">爱发电</string>
     <string name="DonateInfo">喜欢这个客户端？**支持开发**</string>
 </resources>

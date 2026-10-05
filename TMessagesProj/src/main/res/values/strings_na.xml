@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="N_Config">N-Config</string>
+    <string name="VXConfig">vX Config</string>
+    <string name="NotificationIconOutlined" translatable="false">Outlined</string>
     <string name="CombineMessage">Combine Messages</string>
     <string name="TextStyle">Text Style</string>
     <string name="NoiseSuppressAndVoiceEnhance">Voice Enhancements</string>
@@ -39,7 +40,6 @@
     <string name="CustomEditedMessage">Custom Edited Mark</string>
     <string name="NotificationIcon">Notification Icon</string>
     <string name="Official">Official</string>
-    <string name="Nagram" translatable="false">vXGram</string>
     <string name="HalloWeen">HalloWeen</string>
     <string name="ShowOnlineStatus">Show Online Status</string>
     <string name="ShowOnlineStatusNotice">Show the online status of other people next to their profile photo in groups.</string>

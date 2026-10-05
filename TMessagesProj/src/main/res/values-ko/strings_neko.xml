@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="IPv6">IPv6 우선 사용</string>
     <string name="MessageMenu">메시지 메뉴</string>
@@ -68,7 +68,7 @@
     <string name="CallTo">**%1$s**에게 전화할까요?</string>
     <string name="DisableNumberRounding">숫자 반올림 끄기</string>
     <string name="Categories">카테고리</string>
-    <string name="OfficialChannel">Nagram 채널</string>
+    <string name="OfficialChannel">vXGram 채널</string>
     <string name="About">정보</string>
     <string name="IgnoreBlockedAbout">그룹에서 차단한 사용자의 메시지가 더 이상 표시되지 않습니다.</string>
     <string name="SourceCode">소스 코드</string>
@@ -105,10 +105,10 @@
     <string name="DatacenterStatus">데이터센터 상태</string>
     <string name="enhancedFileLoader">다운로드 속도 향상</string>
     <string name="MapProviderOpenFreeMap">Google 지도 대신 OpenFreeMap 사용</string>
-    <string name="UnknownNekoSettingsOption">해당 N-Settings 옵션이 없습니다.</string>
+    <string name="UnknownNekoSettingsOption">해당 vX Settings 옵션이 없습니다.</string>
     <string name="PasscodeNeeded">먼저 암호 잠금을 활성화해야 합니다</string>
     <string name="PasscodeNeko">암호</string>
-    <string name="PasscodeShowInSettings">N-Settings에 표시</string>
+    <string name="PasscodeShowInSettings">vX Settings에 표시</string>
     <string name="PasscodeShowInSettingsAbout">숨긴 후에는 이 페이지를 **링크로만** 열 수 있습니다:</string>
     <string name="PasscodeSet">암호 설정</string>
     <string name="PasscodeEdit">암호 변경</string>
@@ -146,7 +146,7 @@
     <string name="ClearRecentChats">최근 채팅 지우기</string>
     <string name="ClearRecentChatAlert">최근 채팅을 지우시겠습니까?</string>
     <string name="CloudConfig">클라우드 동기화</string>
-    <string name="CloudConfigDesc">N-Settings를 Telegram 클라우드에 저장합니다.</string>
+    <string name="CloudConfigDesc">vX Settings를 Telegram 클라우드에 저장합니다.</string>
     <string name="CloudConfigSyncDate">마지막 동기화: %s, 클라우드: %s</string>
     <string name="CloudConfigSyncDateNever">없음</string>
     <string name="CloudConfigSync">클라우드에 동기화</string>
@@ -155,7 +155,7 @@
     <string name="CloudConfigRestoreShort">복원</string>
     <string name="CloudConfigSyncing">동기화 중…</string>
     <string name="CloudConfigAutoSync">자동 동기화</string>
-    <string name="CloudConfigAutoSyncDesc">N-Settings를 변경한 뒤 자동으로 클라우드에 동기화합니다.</string>
+    <string name="CloudConfigAutoSyncDesc">vX Settings를 변경한 뒤 자동으로 클라우드에 동기화합니다.</string>
     <string name="CloudConfigSyncFailed">설정을 클라우드에 동기화하지 못했습니다</string>
     <string name="CloudConfigRestoreFailed">클라우드에서 설정을 복원하지 못했습니다</string>
     <string name="CopyCallback">콜백 데이터 복사</string>
@@ -185,7 +185,7 @@
     <string name="ShowIdAndDc">프로필에 ID / DC 표시</string>
     <string name="UseDefaultTheme">기본 테마 사용 *</string>
     <string name="DialogsSettings">채팅</string>
-    <string name="NagramXPushService">푸시 서비스</string>
+    <string name="VXGramPushService">푸시 서비스</string>
     <string name="DisableSystemAccount">시스템 계정 끄기</string>
     <string name="FilterMenu">채팅 필터 메뉴</string>
     <string name="DisableProxyWhenVpnEnabled">VPN이 켜져 있으면 프록시 끄기</string>
@@ -233,7 +233,7 @@
     <string name="BackupSettings">설정 내보내기</string>
     <string name="ImportSettings">설정 가져오기</string>
     <string name="ImportSettingsAlert">설정을 덮어쓸까요? 알 수 없는 출처의 설정을 가져오면 PIN이 덮어써져 앱이 잠길 수 있습니다.</string>
-    <string name="nekoXPaymentRemovedToast">결제 기능이 제거되었습니다.</string>
+    <string name="vxGramPaymentRemovedToast">결제 기능이 제거되었습니다.</string>
     <string name="unreadBadgeOnBackButton">뒤로 버튼에 읽지 않음 배지 표시</string>
     <string name="DeleteDownloadedFileConfirm">로컬 캐시에서 이 파일을 삭제할까요?</string>
     <string name="DeleteDownloadedFileSucceed">삭제됨</string>
@@ -264,6 +264,6 @@
     <string name="Chat">채팅</string>
     <string name="Appearance">디자인</string>
     <string name="Donate">후원</string>
-    <string name="DonateDesc">Nagram XF가 마음에 드신다면 개발 후원을 고려해 주세요.</string>
+    <string name="DonateDesc">vXGram가 마음에 드신다면 개발 후원을 고려해 주세요.</string>
     <string name="DonateInfo">이 클라이언트가 마음에 드시나요? **개발 후원하기**</string>
 </resources>

@@ -1220,7 +1220,7 @@ public class PasscodeView extends FrameLayout implements NotificationCenter.Noti
                         }
                     });
                     final BiometricPrompt.PromptInfo promptInfo = new BiometricPrompt.PromptInfo.Builder()
-                            .setTitle(LocaleController.getString(R.string.UnlockToUse).replace("Telegram", LocaleController.getString(R.string.NagramX)))
+                            .setTitle(LocaleController.getString(R.string.UnlockToUse).replace("Telegram", LocaleController.getString(R.string.VXGram)))
                             .setNegativeButtonText(LocaleController.getString(R.string.UsePIN))
                             .setAllowedAuthenticators(BiometricManager.Authenticators.BIOMETRIC_STRONG)
                             .build();

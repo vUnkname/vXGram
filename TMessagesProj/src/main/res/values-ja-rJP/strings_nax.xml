@@ -1,6 +1,5 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="XChannel">Nagram X チャンネル</string>
     <string name="EnableSaveDeletedMessages">削除済みメッセージを保存</string>
     <string name="OnceVideoMessageNote">この動画メッセージは再生後に保持されます。</string>
     <string name="OncePhotoMessageNote">この写真メッセージは閲覧後に保持されます。</string>
@@ -116,7 +115,7 @@
     <string name="Other">その他</string>
     <string name="RestartApp">アプリを再起動</string>
     <string name="ResetSettings">設定をリセット</string>
-    <string name="ResetSettingsAlert">「N-設定」をリセットしますか？</string>
+    <string name="ResetSettingsAlert">「vX 設定」をリセットしますか？</string>
     <string name="DontAutoPlayNextVoice">次のボイスメッセージを自動再生しない</string>
     <string name="SaveToChatSubfolder">チャット別にファイルを保存</string>
     <string name="MessageColoredBackground">カラフルなメッセージ背景</string>
@@ -223,7 +222,7 @@
     <string name="CopySticker">ステッカーをコピー</string>
     <string name="NaxAboutInfo">情報</string>
     <string name="NaxLinks">リンク</string>
-    <string name="NaxAboutDesc">追加機能を備えた Nagram X のフォーク。exteraGram と AyuGram の大部分の機能を含みます。</string>
+    <string name="NaxAboutDesc">追加機能を備えた vXGram のフォーク。exteraGram と AyuGram の大部分の機能を含みます。</string>
     <string name="CheckUpdate">アップデートを確認</string>
     <string name="AutoCheckUpdateOFF">オフ</string>
     <string name="AutoCheckUpdateSwitch">更新チャネル</string>
@@ -322,8 +321,8 @@
     <string name="BackAnimationClassic">クラシック</string>
     <string name="BackAnimationPredictive">予測型</string>
     <string name="AddToFilter">フィルターに追加</string>
-    <string name="UnifiedPushNeverReceivedNotifications">Nagram X の起動以降、UnifiedPush 経由で通知を受信したことはありません。</string>
-    <string name="UnifiedPushLastReceivedNotification">UnifiedPush で最後に受信した通知は %1$d 秒前です。\n\nNagram X の起動以降、 %2$d 件の通知を受信しました。</string>
+    <string name="UnifiedPushNeverReceivedNotifications">vXGram の起動以降、UnifiedPush 経由で通知を受信したことはありません。</string>
+    <string name="UnifiedPushLastReceivedNotification">UnifiedPush で最後に受信した通知は %1$d 秒前です。\n\nvXGram の起動以降、 %2$d 件の通知を受信しました。</string>
     <string name="UnifiedPushCurrentEndpoint">現在の UnifiedPush エンドポイントは：%1$s</string>
     <string name="PlayOnce">ワンショット</string>
     <string name="StorageSettings">ストレージ</string>
@@ -338,7 +337,7 @@
     <string name="CenterActionBarTitleOn">オン</string>
     <string name="HideBottomNavigationBar">下部ナビゲーションバーを非表示</string>
     <string name="HideDialogsSearchField">検索ボックスを非表示</string>
-    <string name="JoinOfficialChannelMessage">Nagram X へようこそ！最新の更新情報を受け取るため、公式チャンネル @NagramXF に参加しますか？</string>
+    <string name="JoinOfficialChannelMessage">vXGram へようこそ！最新の更新情報を受け取るため、公式チャンネル @vXGramOffical に参加しますか？</string>
     <string name="JoinOfficialChannelTitle">公式チャンネルに参加</string>
     <string name="StrokeOnViews">光沢効果</string>
     <string name="TabletModeOff">オフ</string>

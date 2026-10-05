@@ -2188,7 +2188,7 @@ public void updateDrawState(@NonNull android.text.TextPaint ds) {
                                 return;
                             }
                             AlertDialog.Builder builder = new AlertDialog.Builder(getParentActivity());
-                            builder.setTitle(getString(R.string.NagramX));
+                            builder.setTitle(getString(R.string.VXGram));
                             builder.setMessage(getString(R.string.IncorrectTheme));
                             builder.setPositiveButton(getString(R.string.OK), null);
                             showDialog(builder.create());
@@ -2203,7 +2203,7 @@ public void updateDrawState(@NonNull android.text.TextPaint ds) {
                                 return;
                             }
                             AlertDialog.Builder builder = new AlertDialog.Builder(getParentActivity());
-                            builder.setTitle(getString(R.string.NagramX));
+                            builder.setTitle(getString(R.string.VXGram));
                             builder.setMessage(getString(R.string.IncorrectLocalization));
                             builder.setPositiveButton(getString(R.string.OK), null);
                             showDialog(builder.create());
@@ -2796,7 +2796,7 @@ public void updateDrawState(@NonNull android.text.TextPaint ds) {
             return;
         }
         AlertDialog.Builder builder = new AlertDialog.Builder(getParentActivity());
-        builder.setTitle(getString(R.string.NagramX));
+        builder.setTitle(getString(R.string.VXGram));
         builder.setPositiveButton(getString(R.string.OK), null);
         if (message.type == MessageObject.TYPE_VIDEO) {
             builder.setMessage(getString(R.string.NoPlayerInstalled));

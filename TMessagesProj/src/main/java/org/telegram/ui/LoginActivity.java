@@ -3152,7 +3152,7 @@ public class LoginActivity extends BaseFragment implements NotificationCenter.No
                         if (PhoneNumberUtils.compare(phone, userPhone) && ConnectionsManager.getInstance(a).isTestBackend() == testBackend) {
                             final int num = a;
                             AlertDialog.Builder builder = new AlertDialog.Builder(getParentActivity());
-                            builder.setTitle(getString(R.string.NagramX));
+                            builder.setTitle(getString(R.string.VXGram));
                             builder.setMessage(getString("AccountAlreadyLoggedIn", R.string.AccountAlreadyLoggedIn));
                             builder.setPositiveButton(getString("AccountSwitch", R.string.AccountSwitch), (dialog, which) -> {
                                 if (UserConfig.selectedAccount != num) {
@@ -4207,7 +4207,7 @@ public class LoginActivity extends BaseFragment implements NotificationCenter.No
                                         mailer.putExtra(Intent.EXTRA_TEXT, body.toString());
                                         getContext().startActivity(Intent.createChooser(mailer, "Send email..."));
                                     } catch (Exception e) {
-                                        needShowAlert(getString(R.string.NagramX), getString("NoMailInstalled", R.string.NoMailInstalled));
+                                        needShowAlert(getString(R.string.VXGram), getString("NoMailInstalled", R.string.NoMailInstalled));
                                     }
                                 })
                                 .setPositiveButton(getString(R.string.Close), null)
@@ -8628,13 +8628,13 @@ public class LoginActivity extends BaseFragment implements NotificationCenter.No
                         bundle.putString("password", Utilities.bytesToHex(data.toByteArray()));
                         setPage(VIEW_PASSWORD, true, bundle, false);
                     } else {
-                        needShowAlert(LocaleController.getString(R.string.NagramX), error.text);
+                        needShowAlert(LocaleController.getString(R.string.VXGram), error.text);
                     }
                 }), ConnectionsManager.RequestFlagFailOnServerErrors | ConnectionsManager.RequestFlagWithoutLogin);
             } else if (errorText.startsWith("FLOOD_WAIT")) {
-                needShowAlert(LocaleController.getString(R.string.NagramX), getString(R.string.FloodWait) + "\n" + errorText);
+                needShowAlert(LocaleController.getString(R.string.VXGram), getString(R.string.FloodWait) + "\n" + errorText);
             } else {
-                needShowAlert(LocaleController.getString(R.string.NagramX), errorText);
+                needShowAlert(LocaleController.getString(R.string.VXGram), errorText);
             }
         }
 

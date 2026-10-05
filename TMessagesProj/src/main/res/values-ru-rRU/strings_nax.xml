@@ -1,6 +1,5 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="XChannel">Канал Nagram X</string>
     <string name="EnableSaveDeletedMessages">Сохранять удалённые сообщения</string>
     <string name="OnceVideoMessageNote">Это видеосообщение будет сохранено после просмотра.</string>
     <string name="OncePhotoMessageNote">Это фото будет сохранено после просмотра.</string>
@@ -116,7 +115,7 @@
     <string name="Other">Другое</string>
     <string name="RestartApp">Перезапустить приложение</string>
     <string name="ResetSettings">Сброс настроек</string>
-    <string name="ResetSettingsAlert">Вы уверены, что хотите сбросить все «Настройки N»?</string>
+    <string name="ResetSettingsAlert">Вы уверены, что хотите сбросить все «vX Settings»?</string>
     <string name="DontAutoPlayNextVoice">Не воспроизводить следующее голосовое сообщение автоматически</string>
     <string name="SaveToChatSubfolder">Сохранять вложения по названию чатов</string>
     <string name="MessageColoredBackground">Цветные фоны сообщений</string>
@@ -225,7 +224,7 @@
     <string name="CopySticker">Копировать стикер</string>
     <string name="NaxAboutInfo">Информация</string>
     <string name="NaxLinks">Ссылки</string>
-    <string name="NaxAboutDesc">Форк Nagram X с дополнительными функциями. Включает большинство функций из exteraGram и AyuGram.</string>
+    <string name="NaxAboutDesc">Форк vXGram с дополнительными функциями. Включает большинство функций из exteraGram и AyuGram.</string>
     <string name="CheckUpdate">Проверить обновления</string>
     <string name="AutoCheckUpdateOFF">ВЫКЛ</string>
     <string name="AutoCheckUpdateSwitch">Канал обновлений</string>
@@ -324,8 +323,8 @@
     <string name="BackAnimationClassic">Классическая</string>
     <string name="BackAnimationPredictive">Предиктивная</string>
     <string name="AddToFilter">Добавить в фильтр</string>
-    <string name="UnifiedPushNeverReceivedNotifications">С момента запуска Nagram X вы не получали уведомлений с помощью UnifiedPush.</string>
-    <string name="UnifiedPushLastReceivedNotification">Последнее уведомление, полученное с помощью UnifiedPush, было %1$d секунд назад.\n\nС момента запуска Nagram X вы получили %2$d уведомлений.</string>
+    <string name="UnifiedPushNeverReceivedNotifications">С момента запуска vXGram вы не получали уведомлений с помощью UnifiedPush.</string>
+    <string name="UnifiedPushLastReceivedNotification">Последнее уведомление, полученное с помощью UnifiedPush, было %1$d секунд назад.\n\nС момента запуска vXGram вы получили %2$d уведомлений.</string>
     <string name="UnifiedPushCurrentEndpoint">Текущая конечная точка UnifiedPush: %1$s</string>
     <string name="PlayOnce">Играть один раз</string>
     <string name="StorageSettings">Хранилище</string>
@@ -342,7 +341,7 @@
     <string name="CenterActionBarTitleOn">Вкл</string>
     <string name="HideBottomNavigationBar">Скрыть нижнюю панель навигации</string>
     <string name="HideDialogsSearchField">Скрыть поле поиска</string>
-    <string name="JoinOfficialChannelMessage">Добро пожаловать в Nagram X! Хотите присоединиться к официальному каналу @NagramXF, чтобы получать последние обновления и новости?</string>
+    <string name="JoinOfficialChannelMessage">Добро пожаловать в vXGram! Хотите присоединиться к официальному каналу @vXGramOffical, чтобы получать последние обновления и новости?</string>
     <string name="JoinOfficialChannelTitle">Присоединиться к официальному каналу</string>
     <string name="StrokeOnViews">Эффекты бликов</string>
     <string name="TabletModeOff">Выкл</string>

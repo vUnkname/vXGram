@@ -283,7 +283,7 @@ public class NekoAboutActivity extends BaseNekoSettingsActivity {
                     } else if (position == vxCreditsRow) {
                         infoCell.setBackground(new ColorDrawable(0x00000000));
                         infoCell.setText(getString(R.string.VXCreditsTitle) + "\n\n"
-                                + getString(R.string.VXCreditsNagramXF) + "\n"
+                                + getString(R.string.VXCreditsVXGram) + "\n"
                                 + getString(R.string.VXCreditsAether) + "\n"
                                 + getString(R.string.VXCreditsXray));
                     }

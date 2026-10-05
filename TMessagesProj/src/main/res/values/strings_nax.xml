@@ -1,8 +1,6 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="NagramX" translatable="false">vXGram</string>
-    <string name="XChannel">vXGram Channel</string>
-    <string name="NagramXForkChannel">vXGram Channel</string>
+    <string name="VXGram" translatable="false">vXGram</string>
     <string name="VXGramChannel">vXGram Channel</string>
     <string name="JoinOfficialChannelTitle">Join Official Channel</string>
     <string name="JoinOfficialChannelMessage">Welcome to vXGram! Would you like to join the official channel @vXGramOffical for updates?</string>
@@ -95,11 +93,11 @@
     <string name="ShadowBanRemoved">Removed from **user filters**.</string>
     <string name="botCommandConfirmTitle">Send Command</string>
     <string name="botCommandConfirmText">Do you want to send this command?\n\n%s</string>
-    <string name="MessageSavingSaveMediaInPrivateChats">… in Private Chats</string>
-    <string name="MessageSavingSaveMediaInPublicChannels">… in Public Channels</string>
-    <string name="MessageSavingSaveMediaInPrivateChannels">… in Private Channels</string>
-    <string name="MessageSavingSaveMediaInPublicGroups">… in Public Groups</string>
-    <string name="MessageSavingSaveMediaInPrivateGroups">… in Private Groups</string>
+    <string name="MessageSavingSaveMediaInPrivateChats">â€¦ in Private Chats</string>
+    <string name="MessageSavingSaveMediaInPublicChannels">â€¦ in Public Channels</string>
+    <string name="MessageSavingSaveMediaInPrivateChannels">â€¦ in Private Channels</string>
+    <string name="MessageSavingSaveMediaInPublicGroups">â€¦ in Public Groups</string>
+    <string name="MessageSavingSaveMediaInPrivateGroups">â€¦ in Private Groups</string>
     <string name="TelegramUIAutoTranslate">Translate Entire Chats</string>
     <string name="TranslatorMode">With Original Text</string>
     <string name="TranslatorModeAppend">Append</string>
@@ -231,7 +229,7 @@
     <string name="MainTabsForceOpenChatsDesc">When enabled, the search button always opens chat search. When disabled, it opens context search for the current screen (e.g., Settings or Contacts).</string>
     <string name="TranscribeProviderOpenAI">OpenAI-Compatible API</string>
     <string name="OpenAiApiCredentialsDialog">Configure OpenAI-compatible API. You can refer to this **documentation**.\n</string>
-    <string name="OpenAiApiBaseUrlHint">API URL ([…]/chat/completions)</string>
+    <string name="OpenAiApiBaseUrlHint">API URL ([â€¦]/chat/completions)</string>
     <string name="OpenAiCredentialsNotSet">API credentials are not configured.</string>
     <string name="ApiNotSupportedOnAndroidVersion">This API provider is not supported on your Android version (requires Android 8.0+).</string>
     <string name="AppIconTelegramOriginal">Classic</string>
@@ -477,10 +475,10 @@
     <string name="PluginInstalled">%1$s installed</string>
     <string name="PluginUpdated">%1$s updated</string>
     <string name="PluginInstalledButFailedToEnable">%1$s was installed, but enabling failed.</string>
-    <string name="PluginDependencyPreparing">Preparing plugin dependencies…</string>
-    <string name="PluginDependencyResolving">Resolving %1$s…</string>
-    <string name="PluginDependencyDownloadingProgress">Downloading %1$s (%2$d%%)…</string>
-    <string name="PluginDependencyInstalling">Installing %1$s %2$s…</string>
+    <string name="PluginDependencyPreparing">Preparing plugin dependenciesâ€¦</string>
+    <string name="PluginDependencyResolving">Resolving %1$sâ€¦</string>
+    <string name="PluginDependencyDownloadingProgress">Downloading %1$s (%2$d%%)â€¦</string>
+    <string name="PluginDependencyInstalling">Installing %1$s %2$sâ€¦</string>
     <string name="PluginDependencyNoCompatibleWheel">No compatible pure-Python wheel was found for %1$s.</string>
     <string name="PluginDependencyNativeUnsupported">Dependency %1$s only provides native wheels in the selected version range. This client currently supports pure-Python wheels only.</string>
     <string name="PluginDependencySourceUnsupported">Dependency %1$s only provides source distributions in the selected version range. This client currently supports pure-Python wheels only.</string>
@@ -514,14 +512,14 @@
     <string name="PluginsPySdkAutoUpdate">Update Automatically</string>
     <string name="PluginsPySdkCheckUpdates">Check for Updates</string>
     <string name="PluginsPySdkEnableBetaVersion">Install Beta Versions</string>
-    <string name="PluginsPySdkCheckingForUpdates">Checking for updates…</string>
-    <string name="PluginsPySdkLoadingUpdate">Downloading update…</string>
+    <string name="PluginsPySdkCheckingForUpdates">Checking for updatesâ€¦</string>
+    <string name="PluginsPySdkLoadingUpdate">Downloading updateâ€¦</string>
     <string name="PluginsPySdkLatestVersionInstalled">Latest SDK version installed</string>
     <string name="PluginsPySdkUpdateFailed">SDK update failed</string>
-    <string name="CheckingForUpdates">Checking for updates…</string>
+    <string name="CheckingForUpdates">Checking for updatesâ€¦</string>
     <string name="EnableAutoUpdate">Update automatically</string>
     <string name="LatestVersionInstalled">Latest version installed</string>
-    <string name="LoadingUpdate">Downloading update…</string>
+    <string name="LoadingUpdate">Downloading updateâ€¦</string>
     <string name="UpdateAvailable">Update available</string>
     <string name="PluginsDisableArt">Compatibility Mode</string>
     <string name="PluginsDisableArtInfo">Prevents plugin hook failures by disabling ART Profile Saver.</string>

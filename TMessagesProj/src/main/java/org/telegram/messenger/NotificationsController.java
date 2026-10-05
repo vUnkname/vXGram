@@ -4360,7 +4360,7 @@ public class NotificationsController extends BaseController implements Notificat
                         name = LocaleController.getString(R.string.NotificationHiddenName);
                     }
                 } else {
-                    name = LocaleController.getString(R.string.NagramX);
+                    name = LocaleController.getString(R.string.VXGram);
                 }
                 replace = false;
             } else {

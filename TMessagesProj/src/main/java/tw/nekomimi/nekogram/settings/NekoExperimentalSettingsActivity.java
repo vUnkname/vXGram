@@ -104,8 +104,8 @@ public class NekoExperimentalSettingsActivity extends BaseNekoXSettingsActivity 
     }, null));
     private final AbstractConfigCell dividerMedia = cellGroup.appendCell(new ConfigCellDivider());
 
-    // N-Config
-    private final AbstractConfigCell headerNConfig = cellGroup.appendCell(new ConfigCellHeader(getString(R.string.N_Config)));
+    // vX Config
+    private final AbstractConfigCell headerNConfig = cellGroup.appendCell(new ConfigCellHeader(getString(R.string.VXConfig)));
     private final AbstractConfigCell showRPCErrorRow = cellGroup.appendCell(new ConfigCellTextCheck(NaConfig.INSTANCE.getShowRPCError()));
     private final ConfigCellTextCheck forceFontWeightFallbackRow = (ConfigCellTextCheck) cellGroup.appendCell(new ConfigCellTextCheck(NekoConfig.forceFontWeightFallback, null, getString(R.string.ForceFontWeightFallback)));
     private final AbstractConfigCell disableChoosingStickerRow = cellGroup.appendCell(new ConfigCellTextCheck(NekoConfig.disableChoosingSticker));

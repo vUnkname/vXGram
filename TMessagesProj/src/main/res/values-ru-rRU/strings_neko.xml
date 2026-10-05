@@ -1,6 +1,6 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="NekoSettings">Настройки N</string>
+    <string name="NekoSettings">vX Settings</string>
     <string name="IPv6">Предпочитать IPv6</string>
     <string name="MessageMenu">Меню сообщений</string>
     <string name="HidePhone">Скрыть номер телефона</string>
@@ -69,7 +69,7 @@
     <string name="CallTo">Позвонить **%1$s**?</string>
     <string name="DisableNumberRounding">Не округлять числа</string>
     <string name="Categories">Настройки</string>
-    <string name="OfficialChannel">Канал Nagram</string>
+    <string name="OfficialChannel">Канал vXGram</string>
     <string name="About">О проекте</string>
     <string name="IgnoreBlockedAbout">Вы больше не будете видеть сообщения от заблокированных пользователей в группах.</string>
     <string name="SourceCode">Исходный код</string>
@@ -149,7 +149,7 @@
     <string name="ClearRecentChats">Очистить недавние чаты</string>
     <string name="ClearRecentChatAlert">Вы хотите очистить недавние чаты?</string>
     <string name="CloudConfig">Облачная синхронизация</string>
-    <string name="CloudConfigDesc">Сохраните ваши «Настройки N» в облаке Telegram.</string>
+    <string name="CloudConfigDesc">Сохраните ваши «vX Settings» в облаке Telegram.</string>
     <string name="CloudConfigSyncDate">Последняя синхронизация: %s, облако: %s</string>
     <string name="CloudConfigSyncDateNever">никогда</string>
     <string name="CloudConfigSync">Синхронизировать с облаком</string>
@@ -189,7 +189,7 @@
     <string name="ShowIdAndDc">Показывать ID и DC в профиле</string>
     <string name="UseDefaultTheme">Использовать тему по умолчанию *</string>
     <string name="DialogsSettings">Настройки чатов</string>
-    <string name="NagramXPushService">Push-сервис</string>
+    <string name="VXGramPushService">Push-сервис</string>
     <string name="DisableSystemAccount">Скрыть аккаунт в системе</string>
     <string name="FilterMenu">Меню фильтра диалогов</string>
     <string name="DisableProxyWhenVpnEnabled">Отключить прокси при включении VPN</string>
@@ -237,7 +237,7 @@
     <string name="BackupSettings">Экспорт настроек</string>
     <string name="ImportSettings">Импорт настроек</string>
     <string name="ImportSettingsAlert">Перезаписать настройки? Импорт настроек из ненадежных источников может привести к блокировке приложения.</string>
-    <string name="nekoXPaymentRemovedToast">Функции оплаты были удалены.</string>
+    <string name="vxGramPaymentRemovedToast">Функции оплаты были удалены.</string>
     <string name="unreadBadgeOnBackButton">Количество непрочитанных на кнопке «Назад»</string>
     <string name="DeleteDownloadedFileConfirm">Удалить загруженный файл?</string>
     <string name="DeleteDownloadedFileSucceed">Удалено</string>
@@ -268,7 +268,7 @@
     <string name="Chat">Чаты</string>
     <string name="Appearance">Внешний вид</string>
     <string name="Donate">Поддержать</string>
-    <string name="DonateDesc">Если вам нравится Nagram XF, пожалуйста, поддержите разработку.</string>
+    <string name="DonateDesc">Если вам нравится vXGram, пожалуйста, поддержите разработку.</string>
     <string name="DonateInfo">Нравится этот клиент? **Поддержать разработку**</string>
     <string name="iOSMessageInputField">Поле ввода сообщений в стиле iOS</string>
     <string name="iOSMessageInputFieldNotice">Перемещает значок вложений влево и разделяет кнопки на отдельные пузыри. Пока включено, переопределяет режим меню вложений</string></resources>

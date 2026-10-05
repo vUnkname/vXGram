@@ -1276,7 +1276,7 @@ public class DocumentSelectActivity extends BaseFragment {
         if (getParentActivity() == null) {
             return;
         }
-        new AlertDialog.Builder(getParentActivity()).setTitle(LocaleController.getString(R.string.NagramX)).setMessage(error).setPositiveButton(LocaleController.getString("OK", R.string.OK), null).show();
+        new AlertDialog.Builder(getParentActivity()).setTitle(LocaleController.getString(R.string.VXGram)).setMessage(error).setPositiveButton(LocaleController.getString("OK", R.string.OK), null).show();
     }
 
     @SuppressLint("NewApi")

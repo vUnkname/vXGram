@@ -1,6 +1,6 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="N_Config">Налаштування N</string>
+    <string name="VXConfig">vX Config</string>
     <string name="CombineMessage">Об’єднати повідомлення</string>
     <string name="TextStyle">Стиль тексту</string>
     <string name="NoiseSuppressAndVoiceEnhance">Покращення голосу</string>
@@ -9,7 +9,7 @@
     <string name="SendReactions">Надіслати реакції</string>
     <string name="ShowReactions">Показувати реакції</string>
     <string name="CustomTitle">Власний заголовок</string>
-    <string name="CustomTitleHint">Залиште порожнім, щоб використовувати Nagram X</string>
+    <string name="CustomTitleHint">Залиште порожнім, щоб використовувати vXGram</string>
     <string name="CreateMono">Створити моноширинний текст</string>
     <string name="CreateMonoLanguage">Мова коду</string>
     <string name="CopyPhoto">Копіювати фото</string>
@@ -49,7 +49,7 @@
     <string name="CheckAllForum">Додати форум</string>
     <string name="DecorationNone">Немає</string>
     <string name="ChatDecoration">Оформлення чату</string>
-    <string name="NeedChangeNekoSettings">Потрібно змінити N-налаштування</string>
+    <string name="NeedChangeNekoSettings">Потрібно змінити vX Settings</string>
     <string name="DoNotUnarchiveBySwipe">Вимкнути розархівацію свайпом</string>
     <string name="DefaultDeleteMenu">Типове меню видалення</string>
     <string name="DisableStories">Вимкнути історії</string>
