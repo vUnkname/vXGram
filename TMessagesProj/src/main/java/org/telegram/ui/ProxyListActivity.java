@@ -667,12 +667,12 @@ public class ProxyListActivity extends BaseFragment implements NotificationCente
         });
 
         ActionBarMenu menu = actionBar.createMenu();
-        menu.addItem(menu_paste_clipboard, R.drawable.msg_copy)
-                .setContentDescription(getString(R.string.PasteFromClipboard))
-                .setOnClickListener(v -> ProxyUtil.importFromClipboard(getParentActivity()));
-        menu.addItem(menu_add_proxy, R.drawable.msg_add)
-                .setContentDescription(getString(R.string.AddProxy))
-                .setOnClickListener(v -> showAddProxyPlusDialog());
+        ActionBarMenuItem pasteItem = menu.addItem(menu_paste_clipboard, R.drawable.msg_copy);
+        pasteItem.setContentDescription(getString(R.string.PasteFromClipboard));
+        pasteItem.setOnClickListener(v -> ProxyUtil.importFromClipboard(getParentActivity()));
+        ActionBarMenuItem addProxyItem = menu.addItem(menu_add_proxy, R.drawable.msg_add);
+        addProxyItem.setContentDescription(getString(R.string.AddProxy));
+        addProxyItem.setOnClickListener(v -> showAddProxyPlusDialog());
         ActionBarMenuItem otherItem = menu.addItem(0, R.drawable.ic_ab_other);
         otherItem.setContentDescription(getString(R.string.AccDescrMoreOptions));
         otherItem.addSubItem(menu_add_input_telegram, getString(R.string.AddProxyTelegram)).setOnClickListener((v) -> presentFragment(new ProxySettingsActivity()));
@@ -1037,10 +1037,9 @@ public class ProxyListActivity extends BaseFragment implements NotificationCente
             return;
         }
         String[] options = new String[]{ProxyUtil.USER_AGENT_VXGRAM, ProxyUtil.USER_AGENT_HAPP};
-        int selected = TextUtils.equals(ProxyUtil.getSubscriptionUserAgent(), ProxyUtil.USER_AGENT_HAPP) ? 1 : 0;
         AlertDialog.Builder builder = new AlertDialog.Builder(getParentActivity());
         builder.setTitle(getString(R.string.ProxySubscriptionUserAgent));
-        builder.setSingleChoiceItems(options, selected, (dialog, which) -> {
+        builder.setItems(options, (dialog, which) -> {
             ProxyUtil.setSubscriptionUserAgent(options[which]);
             if (listAdapter != null && subscriptionUserAgentRow >= 0) {
                 listAdapter.notifyItemChanged(subscriptionUserAgentRow);

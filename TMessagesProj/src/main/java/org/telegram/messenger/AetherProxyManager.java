@@ -202,7 +202,7 @@ public class AetherProxyManager {
             }
             File binFile = new File(aetherDir, "aether");
             String latestTag = resolveLatestReleaseTag(AETHER_RELEASES_API, FALLBACK_AETHER_VERSION);
-            String versionStamp = new File(aetherDir, "version.txt");
+            File versionStamp = new File(aetherDir, "version.txt");
             String installedVersion = readSmallTextFile(versionStamp);
             if (!binFile.exists() || binFile.length() == 0 || !TextUtils.equals(installedVersion, latestTag)) {
                 if (!downloadBinary(aetherDir, binFile, latestTag)) {
