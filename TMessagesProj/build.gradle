@@ -683,6 +683,7 @@ dependencies {
     implementation 'androidx.sharetarget:sharetarget:1.2.0'
     implementation 'androidx.interpolator:interpolator:1.0.0'
     implementation 'androidx.biometric:biometric:1.1.0'
+    implementation 'androidx.webkit:webkit:1.12.1'
     // vendored zxing sources were removed upstream; QR now goes through the maven artifact
     implementation 'com.google.zxing:core:3.5.4'
     implementation 'org.nanohttpd:nanohttpd:2.3.1'
