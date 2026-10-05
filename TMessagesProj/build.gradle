@@ -64,6 +64,13 @@ pwd = pwd ?: System.getenv('ALIAS_PASS')
 keystorePwd = keystorePwd ?: project.findProperty('RELEASE_STORE_PASSWORD')
 alias = alias ?: project.findProperty('RELEASE_KEY_ALIAS')
 pwd = pwd ?: project.findProperty('RELEASE_KEY_PASSWORD')
+// GitHub Actions always has the bundled dummy release.keystore. LOCAL_PROPERTIES may
+// contain production KEYSTORE_PASS/ALIAS that do not match it — ignore those on CI.
+if (System.getenv('GITHUB_ACTIONS') == 'true') {
+    keystorePwd = project.findProperty('RELEASE_STORE_PASSWORD')
+    alias = project.findProperty('RELEASE_KEY_ALIAS')
+    pwd = project.findProperty('RELEASE_KEY_PASSWORD')
+}
 
 def nativeTarget = System.getenv('NATIVE_TARGET') ?: ''
 // Plugin package is arm-only: shadowhook doesn't support x86.
