@@ -107,6 +107,17 @@ jobs:
             echo "org.gradle.parallel=true"
           } >> gradle.properties
 
+      - name: Create CI signing keystore
+        run: |
+          rm -f TMessagesProj/release.keystore
+          keytool -genkeypair -noprompt \
+            -keystore TMessagesProj/release.keystore \
+            -alias androidkey \
+            -storepass android \
+            -keypass android \
+            -dname "CN=vXGram CI" \
+            -keyalg RSA -keysize 2048 -validity 10000
+
       - name: Build vXGram APKs
         uses: nick-invision/retry@v3
         env:
