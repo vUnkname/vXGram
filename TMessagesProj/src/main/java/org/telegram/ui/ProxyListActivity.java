@@ -442,7 +442,7 @@ public class ProxyListActivity extends BaseFragment implements NotificationCente
             menuView = createIcon(R.drawable.ic_ab_other, R.string.AccDescrMoreOptions);
             pingView = createIcon(R.drawable.msg_speed, R.string.ProxySubscriptionTestPing);
             refreshView = createIcon(R.drawable.msg_reset, R.string.Refresh);
-            collapseView = createIcon(R.drawable.arrow_more, R.string.AccDescrExpand);
+            collapseView = createIcon(R.drawable.arrow_more, R.string.AccDescrExpandPanel);
 
             addView(menuView, LayoutHelper.createFrame(36, 36, Gravity.TOP | (LocaleController.isRTL ? Gravity.LEFT : Gravity.RIGHT), LocaleController.isRTL ? 8 : 0, 8, LocaleController.isRTL ? 0 : 8, 0));
             addView(pingView, LayoutHelper.createFrame(36, 36, Gravity.TOP | (LocaleController.isRTL ? Gravity.LEFT : Gravity.RIGHT), LocaleController.isRTL ? 44 : 0, 8, LocaleController.isRTL ? 0 : 44, 0));

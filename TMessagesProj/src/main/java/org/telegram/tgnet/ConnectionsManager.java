@@ -63,8 +63,10 @@ import java.io.InputStream;
 import java.net.Inet4Address;
 import java.net.Inet6Address;
 import java.net.InetAddress;
+import java.net.InetSocketAddress;
 import java.net.InterfaceAddress;
 import java.net.NetworkInterface;
+import java.net.Socket;
 import java.net.SocketTimeoutException;
 import java.net.URL;
 import java.net.URLConnection;
@@ -811,6 +813,21 @@ FileLog.e(finalRequestObject + " got error " + error.code + " " + error.text);
 
     public long getPauseTime() {
         return lastPauseTime;
+    }
+
+    public long checkProxy(String address, int port, String username, String password, String secret, RequestTimeDelegate requestTimeDelegate) {
+        ProxySettings.Builder builder = ProxySettings.builder()
+                .setAddress(address != null ? address : "")
+                .setPort(port)
+                .setUser(username != null ? username : "")
+                .setPassword(password != null ? password : "")
+                .setSecret(secret != null ? secret : "");
+        if (!TextUtils.isEmpty(secret)) {
+            builder.setType(ProxySettings.Type.MTPROTO);
+        } else {
+            builder.setType(ProxySettings.Type.SOCKS5);
+        }
+        return checkProxy(builder.build(), requestTimeDelegate);
     }
 
     public long checkProxy(ProxySettings settings, RequestTimeDelegate requestTimeDelegate) {

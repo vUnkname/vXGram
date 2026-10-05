@@ -4823,18 +4823,18 @@ public class AndroidUtilities {
             org.telegram.utils.proxy.ProxySettings settings = org.telegram.utils.proxy.ProxySettings.fromSharedPreferences(MessagesController.getGlobalMainSettings());
             if (settings == null || !settings.isValid()) {
                 int p = Utilities.parseInt(port);
-                org.telegram.utils.proxy.ProxySettings.Builder builder = org.telegram.utils.proxy.ProxySettings.builder()
+                org.telegram.utils.proxy.ProxySettings.Builder proxyBuilder = org.telegram.utils.proxy.ProxySettings.builder()
                         .setAddress(address != null ? address : "")
                         .setPort(p)
                         .setUser(user != null ? user : "")
                         .setPassword(password != null ? password : "")
                         .setSecret(secret != null ? secret : "");
                 if (!TextUtils.isEmpty(secret)) {
-                    builder.setType(org.telegram.utils.proxy.ProxySettings.Type.MTPROTO);
+                    proxyBuilder.setType(org.telegram.utils.proxy.ProxySettings.Type.MTPROTO);
                 } else {
-                    builder.setType(org.telegram.utils.proxy.ProxySettings.Type.SOCKS5);
+                    proxyBuilder.setType(org.telegram.utils.proxy.ProxySettings.Type.SOCKS5);
                 }
-                settings = builder.build();
+                settings = proxyBuilder.build();
             }
             SharedPreferences.Editor editor = MessagesController.getGlobalMainSettings().edit();
             editor.putBoolean("proxy_enabled", true);
