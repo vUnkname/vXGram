@@ -22,6 +22,7 @@ import org.telegram.messenger.Utilities;
 import org.telegram.messenger.XraySubscriptionStore;
 import org.telegram.messenger.XraySubscriptionWorkScheduler;
 import org.telegram.utils.proxy.ProxySettings;
+import org.telegram.utils.proxy.XrayOutboundUrlParser;
 import org.telegram.ui.ActionBar.AlertDialog;
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -444,49 +445,27 @@ public class ProxyUtil {
         final boolean[] error = new boolean[]{false};
 
         java.util.function.Consumer<String> handleLine = (line) -> {
-            if (TextUtils.isEmpty(line)) {
+            String token = normalizeShareToken(line);
+            if (TextUtils.isEmpty(token) || !looksLikeShareLink(token)) {
                 return;
             }
-            String lower = line.toLowerCase(Locale.US);
-            if (lower.startsWith("tg://proxy") ||
-                    lower.startsWith("tg://socks") ||
-                    lower.startsWith("https://t.me/proxy") ||
-                    lower.startsWith("https://t.me/socks") ||
-                    lower.startsWith("vless://") ||
-                    lower.startsWith("vmess://") ||
-                    lower.startsWith("trojan://") ||
-                    lower.startsWith("ss://") ||
-                    lower.startsWith("socks://") ||
-                    lower.startsWith("socks5://") ||
-                    lower.startsWith("wg://") ||
-                    lower.startsWith("hysteria://") ||
-                    lower.startsWith("hysteria2://") ||
-                    lower.startsWith("hy2://") ||
-                    ((lower.startsWith("http://") || lower.startsWith("https://")) && line.contains("@"))) {
-                try {
-                    proxies.add(SharedConfig.ProxyInfo.fromUrl(line));
-                } catch (Throwable e) {
-                    error[0] = true;
-                    AndroidUtilities.runOnUIThread(() -> showToast(LocaleController.getString(R.string.BrokenLink) + ": " + (e.getMessage() != null ? e.getMessage() : e.getClass().getSimpleName())));
-                }
+            try {
+                proxies.add(SharedConfig.ProxyInfo.fromUrl(token));
+            } catch (Throwable e) {
+                error[0] = true;
+                FileLog.e("proxy_sub: skip link " + token, e);
             }
         };
 
         if (text != null) {
-            String trimmed = text.trim();
-            if (!trimmed.isEmpty()) {
-                String[] lines = trimmed.split("\n");
-                for (String line : lines) {
-                    String[] parts = line.split(" ");
-                    for (String part : parts) {
-                        handleLine.accept(part);
-                    }
-                }
+            for (String token : extractShareLinks(text)) {
+                handleLine.accept(token);
             }
         }
 
         if (text != null) {
-            if (text.trim().startsWith("[") || text.trim().startsWith("{") || text.contains("\"outbounds\"") || text.contains("\"vless\"")) {
+            String trimmed = text.trim();
+            if (trimmed.startsWith("[") || trimmed.startsWith("{") || text.contains("\"outbounds\"") || text.contains("\"vless\"") || text.contains("\"vmess\"") || text.contains("\"trojan\"")) {
                 proxies.addAll(parseXrayJson(text));
             }
         }
@@ -494,24 +473,102 @@ public class ProxyUtil {
         if (proxies.isEmpty() && !error[0] && !TextUtils.isEmpty(text)) {
             try {
                 String decoded = new String(Base64.decode(text, Base64.NO_PADDING));
-                String trimmed = decoded.trim();
-                if (!trimmed.isEmpty()) {
-                    String[] lines = trimmed.split("\n");
-                    for (String line : lines) {
-                        String[] parts = line.split(" ");
-                        for (String part : parts) {
-                            handleLine.accept(part);
-                        }
-                    }
+                for (String token : extractShareLinks(decoded)) {
+                    handleLine.accept(token);
+                }
+                if (decoded.trim().startsWith("[") || decoded.trim().startsWith("{")) {
+                    proxies.addAll(parseXrayJson(decoded));
                 }
             } catch (Throwable ignored) {
             }
         }
 
-        if (BuildVars.LOGS_ENABLED) {
-            FileLog.d("proxy_sub: parse result proxies=" + proxies.size() + " error=" + error[0]);
-        }
+        FileLog.d("proxy_sub: parse result proxies=" + proxies.size() + " error=" + error[0]);
         return new ParseResult(proxies, error[0]);
+    }
+
+    private static String normalizeShareToken(String line) {
+        if (TextUtils.isEmpty(line)) {
+            return "";
+        }
+        String token = line.trim();
+        while (token.length() >= 2 && ((token.startsWith("\"") && token.endsWith("\"")) || (token.startsWith("'") && token.endsWith("'")))) {
+            token = token.substring(1, token.length() - 1).trim();
+        }
+        while (token.endsWith(",") || token.endsWith(";")) {
+            token = token.substring(0, token.length() - 1).trim();
+        }
+        return token;
+    }
+
+    private static boolean looksLikeShareLink(String token) {
+        String lower = token.toLowerCase(Locale.US);
+        return lower.startsWith("tg://proxy")
+                || lower.startsWith("tg://socks")
+                || lower.startsWith("tg://webproxy")
+                || lower.startsWith("tg:proxy")
+                || lower.startsWith("tg:socks")
+                || lower.startsWith("https://t.me/proxy")
+                || lower.startsWith("https://t.me/socks")
+                || lower.startsWith("https://t.me/webproxy")
+                || lower.startsWith("http://t.me/proxy")
+                || lower.startsWith("http://t.me/socks")
+                || lower.startsWith("vless://")
+                || lower.startsWith("vmess://")
+                || lower.startsWith("trojan://")
+                || lower.startsWith("ss://")
+                || lower.startsWith("socks://")
+                || lower.startsWith("socks5://")
+                || lower.startsWith("wg://")
+                || lower.startsWith("hysteria://")
+                || lower.startsWith("hysteria2://")
+                || lower.startsWith("hy2://")
+                || ((lower.startsWith("http://") || lower.startsWith("https://")) && token.contains("@") && !lower.contains("t.me/"));
+    }
+
+    private static ArrayList<String> extractShareLinks(String text) {
+        ArrayList<String> links = new ArrayList<>();
+        if (TextUtils.isEmpty(text)) {
+            return links;
+        }
+        String[] schemes = new String[]{
+                "vless://", "vmess://", "trojan://", "ss://", "socks://", "socks5://",
+                "wg://", "hysteria://", "hysteria2://", "hy2://",
+                "tg://proxy", "tg://socks", "tg://webproxy",
+                "tg:proxy", "tg:socks",
+                "https://t.me/proxy", "https://t.me/socks", "https://t.me/webproxy",
+                "http://t.me/proxy", "http://t.me/socks"
+        };
+        String lower = text.toLowerCase(Locale.US);
+        int index = 0;
+        while (index < text.length()) {
+            int found = -1;
+            int schemeLen = 0;
+            for (String scheme : schemes) {
+                int at = lower.indexOf(scheme, index);
+                if (at >= 0 && (found < 0 || at < found)) {
+                    found = at;
+                    schemeLen = scheme.length();
+                }
+            }
+            if (found < 0) {
+                break;
+            }
+            int end = found + schemeLen;
+            while (end < text.length()) {
+                char c = text.charAt(end);
+                if (Character.isWhitespace(c) || c == '"' || c == '\'' || c == ']' || c == '}' || c == '<' || c == '>') {
+                    break;
+                }
+                end++;
+            }
+            String token = normalizeShareToken(text.substring(found, end));
+            if (looksLikeShareLink(token)) {
+                links.add(token);
+            }
+            index = Math.max(found + 1, end);
+        }
+        return links;
     }
 
     private static ArrayList<SharedConfig.ProxyInfo> parseXrayJson(String text) {
@@ -528,20 +585,22 @@ public class ProxyUtil {
             if (trimmed.startsWith("[")) {
                 JSONArray array = new JSONArray(trimmed);
                 for (int i = 0; i < array.length(); i++) {
+                    String asString = array.optString(i, null);
+                    if (!TextUtils.isEmpty(asString) && looksLikeShareLink(normalizeShareToken(asString))) {
+                        try {
+                            result.add(SharedConfig.ProxyInfo.fromUrl(asString));
+                        } catch (Throwable ignored) {
+                        }
+                        continue;
+                    }
                     JSONObject obj = array.optJSONObject(i);
                     if (obj != null) {
-                        SharedConfig.ProxyInfo info = parseXrayConfig(obj);
-                        if (info != null) {
-                            result.add(info);
-                        }
+                        result.addAll(parseXrayConfig(obj));
                     }
                 }
             } else if (trimmed.startsWith("{")) {
                 JSONObject obj = new JSONObject(trimmed);
-                SharedConfig.ProxyInfo info = parseXrayConfig(obj);
-                if (info != null) {
-                    result.add(info);
-                }
+                result.addAll(parseXrayConfig(obj));
             }
         } catch (Throwable ignored) {
         }
@@ -572,34 +631,52 @@ public class ProxyUtil {
         return "";
     }
 
-    private static SharedConfig.ProxyInfo parseXrayConfig(JSONObject config) {
+    private static ArrayList<SharedConfig.ProxyInfo> parseXrayConfig(JSONObject config) {
+        ArrayList<SharedConfig.ProxyInfo> result = new ArrayList<>();
         if (config == null) {
-            return null;
+            return result;
         }
+        String remark = config.optString("remarks", config.optString("ps", ""));
         JSONArray outbounds = config.optJSONArray("outbounds");
-        if (outbounds == null || outbounds.length() == 0) {
-            return null;
-        }
-        JSONObject outbound = null;
-        for (int i = 0; i < outbounds.length(); i++) {
-            JSONObject candidate = outbounds.optJSONObject(i);
-            if (candidate == null) {
-                continue;
-            }
-            String protocol = candidate.optString("protocol", "");
-            if ("vless".equalsIgnoreCase(protocol)) {
-                if ("proxy".equalsIgnoreCase(candidate.optString("tag", ""))) {
-                    outbound = candidate;
-                    break;
-                }
-                if (outbound == null) {
-                    outbound = candidate;
+        if (outbounds != null && outbounds.length() > 0) {
+            for (int i = 0; i < outbounds.length(); i++) {
+                SharedConfig.ProxyInfo info = parseXrayOutbound(outbounds.optJSONObject(i), remark);
+                if (info != null) {
+                    result.add(info);
                 }
             }
+            return result;
         }
+        SharedConfig.ProxyInfo single = parseXrayOutbound(config, remark);
+        if (single != null) {
+            result.add(single);
+        }
+        return result;
+    }
+
+    private static SharedConfig.ProxyInfo parseXrayOutbound(JSONObject outbound, String remark) {
         if (outbound == null) {
             return null;
         }
+        String protocol = outbound.optString("protocol", "");
+        if (!XrayOutboundUrlParser.isSupportedOutboundProtocol(protocol)) {
+            return null;
+        }
+        if ("vless".equalsIgnoreCase(protocol)) {
+            SharedConfig.ProxyInfo vless = parseVlessOutbound(outbound, remark);
+            if (vless != null) {
+                return vless;
+            }
+        }
+        try {
+            return XrayOutboundUrlParser.fromOutboundJson(outbound, remark);
+        } catch (Throwable e) {
+            FileLog.e("proxy_sub: skip outbound " + protocol, e);
+            return null;
+        }
+    }
+
+    private static SharedConfig.ProxyInfo parseVlessOutbound(JSONObject outbound, String remark) {
         JSONObject settings = outbound.optJSONObject("settings");
         JSONArray vnext = settings != null ? settings.optJSONArray("vnext") : null;
         JSONObject server = vnext != null && vnext.length() > 0 ? vnext.optJSONObject(0) : null;
@@ -623,9 +700,8 @@ public class ProxyUtil {
         info.vlessId = user.optString("id", "");
         info.vlessEncryption = user.optString("encryption", "none");
         info.vlessFlow = user.optString("flow", "");
-        String remarks = config.optString("remarks", "");
-        if (!TextUtils.isEmpty(remarks)) {
-            info.vlessRemark = remarks;
+        if (!TextUtils.isEmpty(remark)) {
+            info.vlessRemark = remark;
         }
 
         JSONObject stream = outbound.optJSONObject("streamSettings");
@@ -708,6 +784,7 @@ public class ProxyUtil {
                 }
             }
         }
+        info.normalizeVlessFields();
         return info;
     }
 

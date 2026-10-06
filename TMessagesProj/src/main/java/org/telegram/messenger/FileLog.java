@@ -47,19 +47,24 @@ import java.util.Map;
 
 public class FileLog {
     private OutputStreamWriter streamWriter = null;
+    private OutputStreamWriter xrayStreamWriter = null;
     private FastDateFormat dateFormat = null;
     private FastDateFormat fileDateFormat = null;
     private DispatchQueue logQueue = null;
 
     private File currentFile = null;
+    private File xrayFile = null;
     private File networkFile = null;
     private File tonlibFile = null;
+    private long logSessionStart;
     private boolean initied;
     private boolean initiing;
     public static boolean databaseIsMalformed = false;
 
     private OutputStreamWriter tlStreamWriter = null;
     private File tlRequestsFile = null;
+
+    private static final long LOG_RETENTION_MS = 48L * 60L * 60L * 1000L;
 
     private final static String tag = "tmessages";
     private final static String mtproto_tag = "MTProto";
@@ -311,33 +316,86 @@ public class FileLog {
 
         dateFormat = FastDateFormat.getInstance("yyyy_MM_dd-HH_mm_ss.SSS", Locale.US);
         fileDateFormat = FastDateFormat.getInstance("yyyy_MM_dd-HH_mm_ss", Locale.US);
-        String date = fileDateFormat.format(System.currentTimeMillis());
+        if (logQueue == null) {
+            logQueue = new DispatchQueue("logQueue");
+        }
+        openLogFiles();
+        initied = true;
+    }
+
+    private void openLogFiles() {
         try {
             File dir = AndroidUtilities.getLogsDir();
             if (dir == null) {
                 return;
             }
+            cleanupExpiredLogs(dir);
+            logSessionStart = System.currentTimeMillis();
+            String date = fileDateFormat.format(logSessionStart);
             currentFile = new File(dir, date + ".txt");
             tlRequestsFile = new File(dir, date + "_mtproto.txt");
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-        try {
-            logQueue = new DispatchQueue("logQueue");
+            xrayFile = new File(dir, date + "_xray.txt");
+
             currentFile.createNewFile();
-            FileOutputStream stream = new FileOutputStream(currentFile);
+            FileOutputStream stream = new FileOutputStream(currentFile, true);
             streamWriter = new OutputStreamWriter(stream);
             streamWriter.write("-----start log " + date + "-----\n");
             streamWriter.flush();
 
-            FileOutputStream tlStream = new FileOutputStream(tlRequestsFile);
+            FileOutputStream tlStream = new FileOutputStream(tlRequestsFile, true);
             tlStreamWriter = new OutputStreamWriter(tlStream);
             tlStreamWriter.write("-----start log " + date + "-----\n");
             tlStreamWriter.flush();
+
+            xrayFile.createNewFile();
+            FileOutputStream xrayStream = new FileOutputStream(xrayFile, true);
+            xrayStreamWriter = new OutputStreamWriter(xrayStream);
+            xrayStreamWriter.write("-----start xray log " + date + "-----\n");
+            xrayStreamWriter.flush();
         } catch (Exception e) {
             e.printStackTrace();
         }
-        initied = true;
+    }
+
+    private void cleanupExpiredLogs(File dir) {
+        File[] files = dir.listFiles();
+        if (files == null) {
+            return;
+        }
+        long cutoff = System.currentTimeMillis() - LOG_RETENTION_MS;
+        for (File file : files) {
+            if (file == null || !file.isFile()) {
+                continue;
+            }
+            if (file.lastModified() > 0 && file.lastModified() < cutoff) {
+                file.delete();
+            }
+        }
+    }
+
+    private void maybeRotateLogs() {
+        if (logSessionStart <= 0 || System.currentTimeMillis() - logSessionStart < LOG_RETENTION_MS) {
+            return;
+        }
+        try {
+            if (streamWriter != null) {
+                streamWriter.flush();
+                streamWriter.close();
+            }
+            if (tlStreamWriter != null) {
+                tlStreamWriter.flush();
+                tlStreamWriter.close();
+            }
+            if (xrayStreamWriter != null) {
+                xrayStreamWriter.flush();
+                xrayStreamWriter.close();
+            }
+        } catch (Exception ignored) {
+        }
+        streamWriter = null;
+        tlStreamWriter = null;
+        xrayStreamWriter = null;
+        openLogFiles();
     }
 
     public static void ensureInitied() {
@@ -585,6 +643,7 @@ public class FileLog {
         if (getInstance().streamWriter != null) {
             getInstance().logQueue.postRunnable(() -> {
                 try {
+                    getInstance().maybeRotateLogs();
                     getInstance().streamWriter.write(getInstance().dateFormat.format(System.currentTimeMillis()) + " D/" + tag + ": " + message + "\n");
                     getInstance().streamWriter.flush();
                 } catch (Exception e) {
@@ -592,6 +651,30 @@ public class FileLog {
                     if (AndroidUtilities.isENOSPC(e)) {
                         LaunchActivity.checkFreeDiscSpaceStatic(1);
                     }
+                }
+            });
+        }
+    }
+
+    public static void xray(final String message) {
+        if (message == null || message.length() == 0) {
+            return;
+        }
+        if (!BuildVars.LOGS_ENABLED) {
+            return;
+        }
+        ensureInitied();
+        Log.w("vXGram-Xray", message);
+        if (getInstance().logQueue != null) {
+            getInstance().logQueue.postRunnable(() -> {
+                try {
+                    getInstance().maybeRotateLogs();
+                    if (getInstance().xrayStreamWriter != null) {
+                        getInstance().xrayStreamWriter.write(getInstance().dateFormat.format(System.currentTimeMillis()) + " " + message + "\n");
+                        getInstance().xrayStreamWriter.flush();
+                    }
+                } catch (Exception e) {
+                    e.printStackTrace();
                 }
             });
         }
@@ -633,6 +716,9 @@ public class FileLog {
                     continue;
                 }
                 if (getInstance().tonlibFile != null && file.getAbsolutePath().equals(getInstance().tonlibFile.getAbsolutePath())) {
+                    continue;
+                }
+                if (getInstance().xrayFile != null && file.getAbsolutePath().equals(getInstance().xrayFile.getAbsolutePath())) {
                     continue;
                 }
                 file.delete();

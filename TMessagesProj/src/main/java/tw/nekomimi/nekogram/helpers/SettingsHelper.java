@@ -191,23 +191,25 @@ public class SettingsHelper {
         }
         // 顶层 N 设置页：既是搜索结果分类入口，也索引其内部选项。
         BaseNekoXSettingsActivity[] pages = {
-                new NekoGeneralSettingsActivity(),
-                new NekoAppearanceSettingsActivity(),
-                new NekoAyuMomentsSettingsActivity(),
-                new NekoAyuSpySettingsActivity(),
-                new NekoChatSettingsActivity(),
-                new NekoExperimentalSettingsActivity(),
-                new NekoTranslatorSettingsActivity(),
-                // 子设置页：入口行已在父页面可搜，这里只补充索引其内部选项。
-                new GhostModeActivity(),
-                new MainTabsCustomizeActivity(),
-                new RegexFiltersSettingActivity(),
-                new AiPreferencesActivity(),
+                safeSettingsPage(NekoGeneralSettingsActivity::new),
+                safeSettingsPage(NekoAppearanceSettingsActivity::new),
+                safeSettingsPage(NekoAyuMomentsSettingsActivity::new),
+                safeSettingsPage(NekoAyuSpySettingsActivity::new),
+                safeSettingsPage(NekoChatSettingsActivity::new),
+                safeSettingsPage(NekoExperimentalSettingsActivity::new),
+                safeSettingsPage(NekoTranslatorSettingsActivity::new),
+                safeSettingsPage(GhostModeActivity::new),
+                safeSettingsPage(MainTabsCustomizeActivity::new),
+                safeSettingsPage(RegexFiltersSettingActivity::new),
+                safeSettingsPage(AiPreferencesActivity::new),
         };
         final int topPageCount = 7;
 
         for (int idx = 0; idx < pages.length; idx++) {
             BaseNekoXSettingsActivity fragment = pages[idx];
+            if (fragment == null) {
+                continue;
+            }
             int drawable = fragment.getDrawable();
             String f_title = fragment.getTitle();
             if (idx < topPageCount && !TextUtils.isEmpty(f_title)) {
@@ -251,6 +253,15 @@ public class SettingsHelper {
             callback.presentFragment(fragment);
             AndroidUtilities.runOnUIThread(() -> fragment.scrollToRow(key, null));
         }));
+    }
+
+    private static BaseNekoXSettingsActivity safeSettingsPage(Supplier<BaseNekoXSettingsActivity> factory) {
+        try {
+            return factory.get();
+        } catch (Throwable t) {
+            android.util.Log.e("vXGram", "failed to index a vX settings page", t);
+            return null;
+        }
     }
 
     private static int searchGuid(Class<?> page, String key, int titleIndex) {

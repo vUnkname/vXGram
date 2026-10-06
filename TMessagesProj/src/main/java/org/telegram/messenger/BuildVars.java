@@ -65,7 +65,7 @@ public class BuildVars {
 
     public static synchronized void loadLogsEnabled(Context context) {
         SharedPreferences sharedPreferences = context.getSharedPreferences("systemConfig", Context.MODE_PRIVATE);
-        LOGS_ENABLED = sharedPreferences.getBoolean("logsEnabled", BuildConfig.BUILD_TYPE.equals("debug"));
+        LOGS_ENABLED = sharedPreferences.getBoolean("logsEnabled", true);
     }
 
     public static synchronized boolean setLogsEnabled(boolean enabled) {
@@ -79,6 +79,9 @@ public class BuildVars {
             return false;
         }
         LOGS_ENABLED = enabled;
+        if (enabled) {
+            FileLog.ensureInitied();
+        }
         return true;
     }
 

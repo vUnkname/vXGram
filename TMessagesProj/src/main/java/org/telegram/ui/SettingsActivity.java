@@ -689,7 +689,9 @@ public class SettingsActivity extends BaseFragment implements NotificationCenter
             return;
         }
 
-        items.add(UItem.asCustomShadow(topView, 200 - 12));
+        if (topView != null) {
+            items.add(UItem.asCustomShadow(topView, 200 - 12));
+        }
 
         accountNumbers.clear();
         for (int a = 0; a < UserConfig.MAX_ACCOUNT_COUNT; a++) {
@@ -834,7 +836,9 @@ public class SettingsActivity extends BaseFragment implements NotificationCenter
 
 
 
-        items.add(UItem.asCustomShadow(versionView));
+        if (versionView != null) {
+            items.add(UItem.asCustomShadow(versionView));
+        }
     }
 
     private void presentSettingFragment(BaseFragment fragment) {

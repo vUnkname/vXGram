@@ -591,6 +591,7 @@ public class SharedConfig {
 
         public static ProxyInfo fromUrl(String url) {
             if (url != null) {
+                url = stripShareToken(url);
                 String lower = url.toLowerCase(java.util.Locale.US);
                 if (lower.startsWith("vless://")) {
                     return fromVlessUrl(url);
@@ -613,6 +614,17 @@ public class SharedConfig {
                 info.proxyName = fragment;
             }
             return info;
+        }
+
+        private static String stripShareToken(String url) {
+            String token = url.trim();
+            while (token.length() >= 2 && ((token.startsWith("\"") && token.endsWith("\"")) || (token.startsWith("'") && token.endsWith("'")))) {
+                token = token.substring(1, token.length() - 1).trim();
+            }
+            while (token.endsWith(",") || token.endsWith(";")) {
+                token = token.substring(0, token.length() - 1).trim();
+            }
+            return token;
         }
 
         public static ProxyInfo fromVlessUrl(String url) {            try {

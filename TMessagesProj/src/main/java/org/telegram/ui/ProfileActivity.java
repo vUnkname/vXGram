@@ -15623,9 +15623,16 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
                     new SearchResult(403, getString(R.string.TelegramFAQ), getString(R.string.SettingsHelp), R.drawable.msg2_help, () -> Browser.openUrl(f.getParentActivity(), getString(R.string.TelegramFaqUrl))).withLink("tg://settings/faq"),
                     new SearchResult(404, getString(R.string.PrivacyPolicy), getString(R.string.SettingsHelp), R.drawable.msg2_help, () -> Browser.openUrl(f.getParentActivity(), getString(R.string.PrivacyPolicyUrl))).withLink("tg://settings/privacy-policy"),
             };
-            ArrayList<SettingsSearchResult> nagramSettings = SettingsHelper.onCreateSearchArray(
-                    fragment -> AndroidUtilities.runOnUIThread(() -> f.presentFragment(fragment, false, false))
-            );
+            ArrayList<SettingsSearchResult> nagramSettings;
+            try {
+                nagramSettings = SettingsHelper.onCreateSearchArray(
+                        fragment -> AndroidUtilities.runOnUIThread(() -> f.presentFragment(fragment, false, false))
+                );
+            } catch (Throwable e) {
+                FileLog.e(e);
+                android.util.Log.e("vXGram", "vX settings search index failed", e);
+                nagramSettings = new ArrayList<>();
+            }
             ArrayList<SearchResult> list = new ArrayList<>();
             for (SettingsSearchResult oldResult: nagramSettings) {
                 SearchResult result = new SearchResult(

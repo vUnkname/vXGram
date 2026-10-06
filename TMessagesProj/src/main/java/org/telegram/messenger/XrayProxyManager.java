@@ -86,6 +86,8 @@ public class XrayProxyManager {
 
     public static void markFailed(String error) {
         setState(STATE_FAILED, error);
+        android.util.Log.e("vXGram-Xray", error != null ? error : "unknown failure");
+        FileLog.e("Xray: " + (error != null ? error : "unknown failure"));
     }
 
     private static void markStarting() {
@@ -307,9 +309,7 @@ public class XrayProxyManager {
             try (BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream))) {
                 String line;
                 while ((line = reader.readLine()) != null) {
-                    if (BuildVars.LOGS_ENABLED) {
-                        FileLog.d("xray: " + line);
-                    }
+                    FileLog.xray(line);
                 }
             } catch (Exception e) {
                 FileLog.e(e);

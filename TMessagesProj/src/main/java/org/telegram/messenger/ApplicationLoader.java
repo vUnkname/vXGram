@@ -118,6 +118,9 @@ public class ApplicationLoader extends Application {
             applicationContext = base;
         }
         BuildVars.loadLogsEnabled(applicationContext);
+        if (BuildVars.LOGS_ENABLED) {
+            FileLog.ensureInitied();
+        }
         // Keep the default handler chain (plugin crash attribution, Crashlytics) alive for main-thread crashes.
         final Thread.UncaughtExceptionHandler existingMainHandler = Thread.currentThread().getUncaughtExceptionHandler();
         Thread.currentThread().setUncaughtExceptionHandler((thread, error) -> {

@@ -59,6 +59,72 @@ public final class XrayOutboundUrlParser {
         }
     }
 
+    public static SharedConfig.ProxyInfo fromOutboundJson(JSONObject outbound, String remark) throws Exception {
+        if (outbound == null) {
+            throw new IllegalArgumentException("empty outbound");
+        }
+        String protocol = outbound.optString("protocol", "");
+        if (TextUtils.isEmpty(protocol) || !isSupportedOutboundProtocol(protocol)) {
+            throw new IllegalArgumentException(protocol);
+        }
+        String address = "";
+        int port = 0;
+        JSONObject settings = outbound.optJSONObject("settings");
+        if (settings != null) {
+            JSONArray vnext = settings.optJSONArray("vnext");
+            JSONObject server = vnext != null && vnext.length() > 0 ? vnext.optJSONObject(0) : null;
+            if (server == null) {
+                JSONArray servers = settings.optJSONArray("servers");
+                server = servers != null && servers.length() > 0 ? servers.optJSONObject(0) : null;
+            }
+            if (server != null) {
+                address = server.optString("address", "");
+                port = server.optInt("port", 0);
+            }
+            if (TextUtils.isEmpty(address)) {
+                JSONArray peers = settings.optJSONArray("peers");
+                JSONObject peer = peers != null && peers.length() > 0 ? peers.optJSONObject(0) : null;
+                String endpoint = peer != null ? peer.optString("endpoint", "") : "";
+                int colon = endpoint.lastIndexOf(':');
+                if (colon > 0) {
+                    address = endpoint.substring(0, colon);
+                    try {
+                        port = Integer.parseInt(endpoint.substring(colon + 1));
+                    } catch (NumberFormatException ignored) {
+                    }
+                }
+            }
+        }
+        if (port <= 0) {
+            port = 443;
+        }
+        JSONObject copy = new JSONObject(outbound.toString());
+        if (!copy.has("tag")) {
+            copy.put("tag", "proxy");
+        }
+        return generic(address, port, remark, copy);
+    }
+
+    public static boolean isSupportedOutboundProtocol(String protocol) {
+        if (TextUtils.isEmpty(protocol)) {
+            return false;
+        }
+        switch (protocol.toLowerCase(Locale.US)) {
+            case "vless":
+            case "vmess":
+            case "trojan":
+            case "shadowsocks":
+            case "socks":
+            case "http":
+            case "wireguard":
+            case "hysteria":
+            case "hysteria2":
+                return true;
+            default:
+                return false;
+        }
+    }
+
     private static SharedConfig.ProxyInfo generic(String address, int port, String remark, JSONObject outbound) {
         SharedConfig.ProxyInfo info = new SharedConfig.ProxyInfo(
                 ProxySettings.builder()
