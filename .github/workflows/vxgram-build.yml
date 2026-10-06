@@ -51,9 +51,11 @@ jobs:
           java-version: "21"
 
       - name: Set up Ccache
-        uses: hendrikmuhs/ccache-action@v1.2.16
+        uses: hendrikmuhs/ccache-action@v1.2.23
         with:
-          append-timestamp: false
+          key: ${{ runner.os }}-ccache
+          restore-keys: ${{ runner.os }}-ccache
+          append-timestamp: true
 
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v5
@@ -64,19 +66,23 @@ jobs:
         uses: actions/cache@v5
         with:
           path: ~/.gradle
-          key: gradle-${{ hashFiles('**/*.gradle*', 'gradle.properties') }}
+          key: gradle-${{ hashFiles('**/*.gradle*', 'gradle.properties') }}-${{ github.run_id }}
+          restore-keys: |
+            gradle-${{ hashFiles('**/*.gradle*', 'gradle.properties') }}-
+            gradle-
 
       - name: Cache Xray-core downloads
         uses: actions/cache@v5
         with:
           path: TMessagesProj/build/xray
-          key: xray-${{ env.XRAY_VERSION }}-${{ hashFiles('TMessagesProj/build.gradle') }}
+          key: xray-${{ env.XRAY_VERSION }}-${{ hashFiles('TMessagesProj/build.gradle') }}-${{ github.run_id }}
           restore-keys: |
+            xray-${{ env.XRAY_VERSION }}-${{ hashFiles('TMessagesProj/build.gradle') }}-
             xray-${{ env.XRAY_VERSION }}-
             xray-
 
       - name: Set up Android SDK Tools
-        uses: android-actions/setup-android@v3
+        uses: android-actions/setup-android@v4
         with:
           packages: "build-tools;36.0.0 ndk;27.2.12479018 platforms;android-36"
 
@@ -143,14 +149,14 @@ jobs:
           find TMessagesProj/build/outputs/apk/plugin/staging -name '*.apk' -exec ls -la {} \;
 
       - name: Upload normal APK artifacts
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v6
         with:
           name: vXGram-normal-apks-${{ github.sha }}
           path: TMessagesProj/build/outputs/apk/normal/staging/*.apk
           if-no-files-found: error
 
       - name: Upload plugin APK artifacts
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v6
         with:
           name: vXGram-plugin-apks-${{ github.sha }}
           path: TMessagesProj/build/outputs/apk/plugin/staging/*.apk
@@ -158,7 +164,7 @@ jobs:
 
       - name: Publish GitHub Release
         if: ${{ github.event_name != 'workflow_dispatch' || inputs.skip_release != true }}
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           tag_name: ${{ inputs.release_tag != '' && inputs.release_tag || format('v{0}-vX.{1}', env.APP_VERSION_NAME, env.VX_VERSION_NAME) }}
           name: vXGram ${{ env.APP_VERSION_NAME }}-vX.${{ env.VX_VERSION_NAME }}
