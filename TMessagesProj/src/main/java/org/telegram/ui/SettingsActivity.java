@@ -2296,6 +2296,8 @@ public class SettingsActivity extends BaseFragment implements NotificationCenter
         }
 
         public static class Factory extends UItem.UItemFactory<ProxyQuickCell> {
+            static { setup(new Factory()); }
+
             @Override
             public ProxyQuickCell createView(Context context, RecyclerListView listView, int currentAccount, int classGuid, Theme.ResourcesProvider resourcesProvider) {
                 return new ProxyQuickCell(context);
