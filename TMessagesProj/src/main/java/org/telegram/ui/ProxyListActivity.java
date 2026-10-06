@@ -1126,7 +1126,7 @@ public class ProxyListActivity extends BaseFragment implements NotificationCente
 
         TextSettingsCell pasteCell = new TextSettingsCell(getParentActivity());
         pasteCell.setBackgroundColor(Theme.getColor(Theme.key_dialogBackgroundGray));
-        pasteCell.setBackground(Theme.getSelectorDrawable(Theme.getColor(Theme.key_dialogButtonSelector)));
+        pasteCell.setBackground(Theme.getSelectorDrawable(Theme.getColor(Theme.key_dialogButtonSelector), false));
         pasteCell.setText(getString(R.string.PasteFromClipboard), false);
         pasteCell.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteBlueText4));
         pasteCell.setOnClickListener(v -> ProxyUtil.importFromClipboard(getParentActivity()));
