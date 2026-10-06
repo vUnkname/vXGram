@@ -36,6 +36,8 @@ public final class XraySubscriptionStore {
         public long lastUpdateTime;
         public int configCount;
         public boolean autoUpdate;
+        public boolean pinned;
+        public String sortMode = "added";
 
         public String getDisplayTitle() {
             if (!TextUtils.isEmpty(remark)) {
@@ -181,6 +183,11 @@ public final class XraySubscriptionStore {
         entry.lastUpdateTime = obj.optLong("lastUpdateTime", 0);
         entry.configCount = obj.optInt("configCount", 0);
         entry.autoUpdate = obj.optBoolean("autoUpdate", false);
+        entry.pinned = obj.optBoolean("pinned", false);
+        entry.sortMode = obj.optString("sortMode", "added");
+        if (TextUtils.isEmpty(entry.sortMode)) {
+            entry.sortMode = "added";
+        }
         return entry;
     }
 
@@ -201,6 +208,8 @@ public final class XraySubscriptionStore {
             obj.put("lastUpdateTime", entry.lastUpdateTime);
             obj.put("configCount", entry.configCount);
             obj.put("autoUpdate", entry.autoUpdate);
+            obj.put("pinned", entry.pinned);
+            obj.put("sortMode", entry.sortMode != null ? entry.sortMode : "added");
         } catch (Throwable e) {
             FileLog.e(e);
         }

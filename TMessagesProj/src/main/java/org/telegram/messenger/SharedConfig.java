@@ -80,7 +80,8 @@ public class SharedConfig {
     private final static int PROXY_SCHEMA_V3 = 3;
     private final static int PROXY_SCHEMA_V4 = 4;
     private final static int PROXY_SCHEMA_V5 = 5;
-    private final static int PROXY_CURRENT_SCHEMA_VERSION = PROXY_SCHEMA_V5;
+    private final static int PROXY_SCHEMA_V6 = 6;
+    private final static int PROXY_CURRENT_SCHEMA_VERSION = PROXY_SCHEMA_V6;
 
     public final static int PASSCODE_TYPE_PIN = 0,
             PASSCODE_TYPE_PASSWORD = 1;
@@ -429,6 +430,8 @@ public class SharedConfig {
         public String proxyName = "";
         public String vlessRawQuery;
         public String vlessAdvancedJson;
+        public boolean unrecognized;
+        public String originalShareUrl = "";
 
         // Aether fields (used when settings.getType() == ProxySettings.Type.AETHER)
         public String aetherProtocol;
@@ -707,6 +710,9 @@ public class SharedConfig {
                             case "mode":
                                 info.vlessMode = value;
                                 break;
+                            case "extra":
+                                info.vlessAdvancedJson = value;
+                                break;
                             case "allowinsecure":
                                 info.vlessAllowInsecure = "1".equals(value) || "true".equalsIgnoreCase(value);
                                 break;
@@ -794,6 +800,14 @@ public class SharedConfig {
                 info.normalizeAetherFields();
             }
 
+            if (version >= PROXY_SCHEMA_V6) {
+                info.unrecognized = data.readBool(false);
+                info.originalShareUrl = data.readString(false);
+                if (info.originalShareUrl == null) {
+                    info.originalShareUrl = "";
+                }
+            }
+
             return info;
         }
 
@@ -840,6 +854,8 @@ public class SharedConfig {
             data.writeString(aetherNoize);
             data.writeBool(aetherQuickReconnect);
             data.writeString(aetherPeers);
+            data.writeBool(unrecognized);
+            data.writeString(originalShareUrl != null ? originalShareUrl : "");
         }
     }
 
@@ -1889,7 +1905,7 @@ public class SharedConfig {
             if (count == -1) { // V2 or newer
                 int version = data.readByte(false);
 
-                if (version == PROXY_SCHEMA_V2 || version == PROXY_SCHEMA_V3 || version == PROXY_SCHEMA_V4 || version == PROXY_SCHEMA_V5) {
+                if (version == PROXY_SCHEMA_V2 || version == PROXY_SCHEMA_V3 || version == PROXY_SCHEMA_V4 || version == PROXY_SCHEMA_V5 || version == PROXY_SCHEMA_V6) {
                     count = data.readInt32(false);
 
                     for (int i = 0; i < count; i++) {
@@ -1925,17 +1941,6 @@ public class SharedConfig {
 
     public static void saveProxyList() {
         List<ProxyInfo> infoToSerialize = new ArrayList<>(proxyList);
-        Collections.sort(infoToSerialize, (o1, o2) -> {
-            long bias1 = SharedConfig.currentProxy == o1 ? -200000 : 0;
-            if (!o1.available) {
-                bias1 += 100000;
-            }
-            long bias2 = SharedConfig.currentProxy == o2 ? -200000 : 0;
-            if (!o2.available) {
-                bias2 += 100000;
-            }
-            return Long.compare(o1.ping + bias1, o2.ping + bias2);
-        });
         SerializedData serializedData = new SerializedData();
         serializedData.writeInt32(-1);
         serializedData.writeByte(PROXY_CURRENT_SCHEMA_VERSION);

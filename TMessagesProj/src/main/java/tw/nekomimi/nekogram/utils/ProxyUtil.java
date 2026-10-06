@@ -28,9 +28,13 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 
 import java.io.BufferedReader;
+import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.io.UnsupportedEncodingException;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
 import java.security.SecureRandom;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
@@ -67,7 +71,11 @@ public class ProxyUtil {
     }
 
     private static void showToast(CharSequence text) {
-        AndroidUtilities.runOnUIThread(() -> Toast.makeText(ApplicationLoader.applicationContext, text, Toast.LENGTH_SHORT).show());
+        showToast(text, Toast.LENGTH_SHORT);
+    }
+
+    private static void showToast(CharSequence text, int duration) {
+        AndroidUtilities.runOnUIThread(() -> Toast.makeText(ApplicationLoader.applicationContext, text, duration).show());
     }
 
     private static void showImportedDialog(Activity ctx, List<SharedConfig.ProxyInfo> proxies) {
@@ -103,6 +111,10 @@ public class ProxyUtil {
 
         ParseResult result = parseProxyText(text);
         if (result.proxies.isEmpty()) {
+            if (looksLikeSubscriptionUrl(text)) {
+                importSubscriptionWithOptions(ctx, text.trim(), null, true, 0, true);
+                return;
+            }
             if (!result.error) {
                 showToast(LocaleController.getString(R.string.BrokenLink));
             }
@@ -130,17 +142,18 @@ public class ProxyUtil {
         if (BuildVars.LOGS_ENABLED) {
             FileLog.d("proxy_sub: import url=" + normalizedUrl);
         }
+        showToast(LocaleController.getString(R.string.ProxySubscriptionFetching));
         Utilities.globalQueue.postRunnable(() -> {
             try {
                 FetchResult fetchResult = fetchSubscription(normalizedUrl, remark, autoUpdate, intervalMinutes, saveSubscription);
                 if (fetchResult == null || fetchResult.parseResult.proxies.isEmpty()) {
                     if (fetchResult == null || !fetchResult.parseResult.error) {
-                        AndroidUtilities.runOnUIThread(() -> showToast(LocaleController.getString(R.string.BrokenLink)));
+                        showToast(LocaleController.getString(R.string.BrokenLink));
                     }
                     return;
                 }
                 if (!containsXrayProxy(fetchResult.parseResult.proxies)) {
-                    AndroidUtilities.runOnUIThread(() -> showToast(LocaleController.getString(R.string.ProxySubscriptionNoXray)));
+                    showToast(LocaleController.getString(R.string.ProxySubscriptionNoXray));
                     return;
                 }
                 String subscriptionName = fetchResult.entry.getDisplayTitle();
@@ -157,13 +170,11 @@ public class ProxyUtil {
                 }
                 AndroidUtilities.runOnUIThread(() -> {
                     NotificationCenter.getGlobalInstance().postNotificationName(NotificationCenter.proxySettingsChanged);
-                    if (!fetchResult.parseResult.error) {
-                        showToast(LocaleController.getString(R.string.ProxySubscriptionAdded));
-                    }
+                    showToast(LocaleController.getString(R.string.ProxySubscriptionAdded), Toast.LENGTH_LONG);
                 });
             } catch (Throwable e) {
                 FileLog.e(e);
-                AndroidUtilities.runOnUIThread(() -> showToast(e.getMessage() != null ? e.getMessage() : e.getClass().getSimpleName()));
+                showToast(e.getMessage() != null ? e.getMessage() : e.getClass().getSimpleName());
             }
         });
     }
@@ -284,16 +295,25 @@ public class ProxyUtil {
         try {
             conn = (HttpURLConnection) new URL(normalizedUrl).openConnection();
             applyHwidHeaders(conn);
+            conn.setInstanceFollowRedirects(true);
             conn.setConnectTimeout(15000);
             conn.setReadTimeout(30000);
+            int code = conn.getResponseCode();
+            InputStream stream = code >= 400 ? conn.getErrorStream() : conn.getInputStream();
+            if (stream == null) {
+                throw new IllegalStateException("HTTP " + code);
+            }
             String text;
-            try (BufferedReader reader = new BufferedReader(new InputStreamReader(conn.getInputStream()))) {
+            try (BufferedReader reader = new BufferedReader(new InputStreamReader(stream, StandardCharsets.UTF_8))) {
                 StringBuilder buffer = new StringBuilder();
                 String line;
                 while ((line = reader.readLine()) != null) {
                     buffer.append(line).append('\n');
                 }
                 text = buffer.toString();
+            }
+            if (code >= 400) {
+                throw new IllegalStateException("HTTP " + code);
             }
             XraySubscriptionStore.Entry entry = XraySubscriptionStore.getByUrl(normalizedUrl);
             if (entry == null) {
@@ -413,15 +433,31 @@ public class ProxyUtil {
             return "";
         }
         String trimmed = value.trim();
+        if (trimmed.regionMatches(true, 0, "base64:", 0, 7)) {
+            trimmed = trimmed.substring(7).trim();
+        }
         try {
-            byte[] decoded = Base64.decode(trimmed, Base64.DEFAULT);
-            String asText = new String(decoded, "UTF-8").trim();
-            if (!TextUtils.isEmpty(asText)) {
+            byte[] decoded = Base64.decode(trimmed.replace("\n", "").replace("\r", ""), Base64.DEFAULT);
+            String asText = new String(decoded, StandardCharsets.UTF_8).trim();
+            if (!TextUtils.isEmpty(asText) && looksLikeDecodedText(asText)) {
+                if (asText.startsWith("//")) {
+                    asText = asText.substring(2).trim();
+                }
                 return asText;
             }
         } catch (Throwable ignored) {
         }
-        return trimmed;
+        return value.trim();
+    }
+
+    private static boolean looksLikeDecodedText(String value) {
+        int replacement = 0;
+        for (int i = 0; i < value.length(); i++) {
+            if (value.charAt(i) == '\uFFFD') {
+                replacement++;
+            }
+        }
+        return replacement * 4 < value.length();
     }
 
     public static boolean isXrayProxy(SharedConfig.ProxyInfo info) {
@@ -446,19 +482,51 @@ public class ProxyUtil {
 
         java.util.function.Consumer<String> handleLine = (line) -> {
             String token = normalizeShareToken(line);
-            if (TextUtils.isEmpty(token) || !looksLikeShareLink(token)) {
+            if (TextUtils.isEmpty(token)) {
                 return;
             }
-            try {
-                proxies.add(SharedConfig.ProxyInfo.fromUrl(token));
-            } catch (Throwable e) {
-                error[0] = true;
-                FileLog.e("proxy_sub: skip link " + token, e);
+            if (looksLikeShareLink(token)) {
+                try {
+                    SharedConfig.ProxyInfo info = SharedConfig.ProxyInfo.fromUrl(token);
+                    if (isDummySubscriptionProxy(info)) {
+                        return;
+                    }
+                    proxies.add(info);
+                } catch (Throwable e) {
+                    if (token.contains("://") && !isLoopbackShareUrl(token)) {
+                        proxies.add(createUnrecognizedProxy(token));
+                    } else {
+                        FileLog.e("proxy_sub: skip link " + token, e);
+                    }
+                }
+                return;
+            }
+            if (token.contains("://") && !isLoopbackShareUrl(token)) {
+                try {
+                    SharedConfig.ProxyInfo info = SharedConfig.ProxyInfo.fromUrl(token);
+                    if (isDummySubscriptionProxy(info)) {
+                        return;
+                    }
+                    proxies.add(info);
+                } catch (Throwable e) {
+                    proxies.add(createUnrecognizedProxy(token));
+                }
             }
         };
 
         if (text != null) {
+            text = unwrapSubscriptionPayload(text);
+            LinkedHashSet<String> tokens = new LinkedHashSet<>();
+            for (String rawLine : text.split("\\R")) {
+                String line = normalizeShareToken(rawLine);
+                if (!TextUtils.isEmpty(line)) {
+                    tokens.add(line);
+                }
+            }
             for (String token : extractShareLinks(text)) {
+                tokens.add(token);
+            }
+            for (String token : tokens) {
                 handleLine.accept(token);
             }
         }
@@ -466,25 +534,44 @@ public class ProxyUtil {
         if (text != null) {
             String trimmed = text.trim();
             if (trimmed.startsWith("[") || trimmed.startsWith("{") || text.contains("\"outbounds\"") || text.contains("\"vless\"") || text.contains("\"vmess\"") || text.contains("\"trojan\"")) {
-                proxies.addAll(parseXrayJson(text));
+                for (SharedConfig.ProxyInfo info : parseXrayJson(text)) {
+                    if (!isDummySubscriptionProxy(info)) {
+                        proxies.add(info);
+                    }
+                }
             }
         }
 
         if (proxies.isEmpty() && !error[0] && !TextUtils.isEmpty(text)) {
             try {
-                String decoded = new String(Base64.decode(text, Base64.NO_PADDING));
-                for (String token : extractShareLinks(decoded)) {
-                    handleLine.accept(token);
-                }
-                if (decoded.trim().startsWith("[") || decoded.trim().startsWith("{")) {
-                    proxies.addAll(parseXrayJson(decoded));
+                String decoded = unwrapBase64(text);
+                if (!TextUtils.equals(decoded, text)) {
+                    for (String token : extractShareLinks(decoded)) {
+                        handleLine.accept(token);
+                    }
+                    if (decoded.trim().startsWith("[") || decoded.trim().startsWith("{")) {
+                        for (SharedConfig.ProxyInfo info : parseXrayJson(decoded)) {
+                            if (!isDummySubscriptionProxy(info)) {
+                                proxies.add(info);
+                            }
+                        }
+                    }
                 }
             } catch (Throwable ignored) {
             }
         }
 
-        FileLog.d("proxy_sub: parse result proxies=" + proxies.size() + " error=" + error[0]);
-        return new ParseResult(proxies, error[0]);
+        ArrayList<SharedConfig.ProxyInfo> unique = new ArrayList<>();
+        Set<String> seen = new LinkedHashSet<>();
+        for (SharedConfig.ProxyInfo info : proxies) {
+            String id = proxyIdentity(info);
+            if (seen.add(id)) {
+                unique.add(info);
+            }
+        }
+
+        FileLog.d("proxy_sub: parse result proxies=" + unique.size() + " error=" + error[0]);
+        return new ParseResult(unique, error[0]);
     }
 
     private static String normalizeShareToken(String line) {
@@ -526,6 +613,124 @@ public class ProxyUtil {
                 || ((lower.startsWith("http://") || lower.startsWith("https://")) && token.contains("@") && !lower.contains("t.me/"));
     }
 
+    private static boolean looksLikeSubscriptionUrl(String text) {
+        String token = normalizeShareToken(text);
+        if (TextUtils.isEmpty(token)) {
+            return false;
+        }
+        String lower = token.toLowerCase(Locale.US);
+        if (!(lower.startsWith("http://") || lower.startsWith("https://"))) {
+            return false;
+        }
+        if (looksLikeShareLink(token)) {
+            return false;
+        }
+        return !lower.contains("t.me/");
+    }
+
+    private static String unwrapSubscriptionPayload(String text) {
+        if (TextUtils.isEmpty(text)) {
+            return text;
+        }
+        if (!extractShareLinks(text).isEmpty()) {
+            return text;
+        }
+        String decoded = unwrapBase64(text);
+        return TextUtils.isEmpty(decoded) ? text : decoded;
+    }
+
+    private static String unwrapBase64(String text) {
+        if (TextUtils.isEmpty(text)) {
+            return text;
+        }
+        String compact = text.replaceAll("\\s+", "");
+        try {
+            byte[] decoded = Base64.decode(compact, Base64.DEFAULT);
+            if (decoded == null || decoded.length == 0) {
+                return text;
+            }
+            String asText = new String(decoded, StandardCharsets.UTF_8);
+            if (!extractShareLinks(asText).isEmpty() || asText.trim().startsWith("{") || asText.trim().startsWith("[")) {
+                return asText;
+            }
+        } catch (Throwable ignored) {
+        }
+        return text;
+    }
+
+    private static boolean isLoopbackShareUrl(String token) {
+        if (TextUtils.isEmpty(token)) {
+            return true;
+        }
+        try {
+            Uri uri = Uri.parse(token);
+            String host = uri.getHost();
+            if (TextUtils.isEmpty(host)) {
+                return false;
+            }
+            host = host.toLowerCase(Locale.US);
+            return "127.0.0.1".equals(host) || "localhost".equals(host) || "::1".equals(host) || "0.0.0.0".equals(host);
+        } catch (Throwable ignored) {
+            return token.contains("127.0.0.1") || token.contains("localhost");
+        }
+    }
+
+    private static SharedConfig.ProxyInfo createUnrecognizedProxy(String token) {
+        ProxySettings settings = ProxySettings.builder()
+                .setType(ProxySettings.Type.SOCKS5)
+                .setAddress("unrecognized.local")
+                .setPort(1)
+                .build();
+        SharedConfig.ProxyInfo info = new SharedConfig.ProxyInfo(settings);
+        info.unrecognized = true;
+        info.originalShareUrl = token;
+        try {
+            Uri uri = Uri.parse(token);
+            String fragment = uri.getFragment();
+            if (!TextUtils.isEmpty(fragment)) {
+                info.proxyName = URLDecoder.decode(fragment, "UTF-8");
+            } else if (!TextUtils.isEmpty(uri.getSchemeSpecificPart())) {
+                info.proxyName = token.length() > 64 ? token.substring(0, 64) + "…" : token;
+            } else {
+                info.proxyName = token.length() > 64 ? token.substring(0, 64) + "…" : token;
+            }
+        } catch (UnsupportedEncodingException e) {
+            info.proxyName = token.length() > 64 ? token.substring(0, 64) + "…" : token;
+        }
+        if (TextUtils.isEmpty(info.proxyName)) {
+            info.proxyName = LocaleController.getString(R.string.ProxyUnknownType);
+        }
+        return info;
+    }
+
+    private static boolean isDummySubscriptionProxy(SharedConfig.ProxyInfo info) {
+        if (info == null || info.settings == null) {
+            return true;
+        }
+        String address = info.settings.getAddress();
+        if (TextUtils.isEmpty(address)) {
+            return true;
+        }
+        String host = address.toLowerCase(Locale.US);
+        return "127.0.0.1".equals(host) || "localhost".equals(host) || "::1".equals(host) || "0.0.0.0".equals(host);
+    }
+
+    private static String proxyIdentity(SharedConfig.ProxyInfo info) {
+        if (info == null || info.settings == null) {
+            return "";
+        }
+        return info.settings.getType() + "|"
+                + info.settings.getAddress() + "|"
+                + info.settings.getPort() + "|"
+                + info.settings.getSecret() + "|"
+                + info.vlessId + "|"
+                + info.vlessType + "|"
+                + info.vlessSni + "|"
+                + info.vlessHost + "|"
+                + info.vlessPath + "|"
+                + info.vlessAdvancedJson;
+    }
+
     private static ArrayList<String> extractShareLinks(String text) {
         ArrayList<String> links = new ArrayList<>();
         if (TextUtils.isEmpty(text)) {
@@ -546,7 +751,7 @@ public class ProxyUtil {
             int schemeLen = 0;
             for (String scheme : schemes) {
                 int at = lower.indexOf(scheme, index);
-                if (at >= 0 && (found < 0 || at < found)) {
+                if (at >= 0 && (found < 0 || at < found || (at == found && scheme.length() > schemeLen))) {
                     found = at;
                     schemeLen = scheme.length();
                 }
@@ -908,26 +1113,12 @@ public class ProxyUtil {
     }
 
     public static String getSubscriptionUserAgent() {
-        SharedPreferences prefs = ApplicationLoader.applicationContext.getSharedPreferences("mainconfig", Context.MODE_PRIVATE);
-        String ua = prefs.getString(PREF_SUBSCRIPTION_USER_AGENT, USER_AGENT_VXGRAM);
-        if (TextUtils.isEmpty(ua)) {
-            return USER_AGENT_VXGRAM;
-        }
-        if (USER_AGENT_HAPP.equals(ua) || USER_AGENT_VXGRAM.equals(ua)) {
-            return ua;
-        }
-        return USER_AGENT_VXGRAM;
+        return USER_AGENT_HAPP;
     }
 
     public static void setSubscriptionUserAgent(String userAgent) {
-        if (TextUtils.isEmpty(userAgent)) {
-            userAgent = USER_AGENT_VXGRAM;
-        }
-        if (!USER_AGENT_HAPP.equals(userAgent) && !USER_AGENT_VXGRAM.equals(userAgent)) {
-            userAgent = USER_AGENT_VXGRAM;
-        }
         SharedPreferences prefs = ApplicationLoader.applicationContext.getSharedPreferences("mainconfig", Context.MODE_PRIVATE);
-        prefs.edit().putString(PREF_SUBSCRIPTION_USER_AGENT, userAgent).apply();
+        prefs.edit().putString(PREF_SUBSCRIPTION_USER_AGENT, USER_AGENT_HAPP).apply();
     }
 
     private static void applyHwidHeaders(HttpURLConnection conn) {

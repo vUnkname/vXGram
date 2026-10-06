@@ -23,8 +23,12 @@ import android.graphics.PorterDuff;
 import android.graphics.PorterDuffColorFilter;
 import android.graphics.drawable.Drawable;
 import android.os.SystemClock;
+import android.text.SpannableStringBuilder;
+import android.text.Spanned;
 import android.text.TextUtils;
+import android.text.style.DynamicDrawableSpan;
 import android.widget.LinearLayout;
+import android.widget.Toast;
 import android.util.TypedValue;
 import android.view.Gravity;
 import android.view.View;
@@ -54,6 +58,7 @@ import org.telegram.messenger.browser.Browser;
 import org.telegram.utils.proxy.ProxySettings;
 import org.telegram.tgnet.ConnectionsManager;
 import org.telegram.ui.ActionBar.ActionBar;
+import tw.nekomimi.nekogram.utils.NekoProxyUtil;
 import tw.nekomimi.nekogram.utils.ProxyUtil;
 import org.telegram.ui.ActionBar.ActionBarMenu;
 import org.telegram.ui.ActionBar.ActionBarMenuItem;
@@ -72,8 +77,10 @@ import org.telegram.ui.Components.CheckBox2;
 import org.telegram.ui.Components.CubicBezierInterpolator;
 import org.telegram.ui.Components.ItemOptions;
 import org.telegram.ui.Components.LayoutHelper;
+import org.telegram.ui.Components.ColoredImageSpan;
 import org.telegram.ui.Components.EditTextBoldCursor;
 import org.telegram.ui.Components.LineProgressView;
+import org.telegram.ui.Components.OutlineTextContainerView;
 import org.telegram.ui.Components.NumberTextView;
 import org.telegram.ui.Components.RecyclerListView;
 import org.telegram.ui.Components.SlideChooseView;
@@ -84,6 +91,7 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 
 public class ProxyListActivity extends BaseFragment implements NotificationCenter.NotificationCenterDelegate {
     private final static boolean IS_PROXY_ROTATION_AVAILABLE = true;
@@ -149,6 +157,11 @@ public class ProxyListActivity extends BaseFragment implements NotificationCente
     private final List<SubscriptionRow> subscriptionRows = new ArrayList<>();
     private final HashSet<String> collapsedSubscriptions = new HashSet<>();
     private boolean canCollapseSubscriptions;
+    private Runnable subscriptionMetaRefreshRunnable;
+    private static final long SUBSCRIPTION_META_REFRESH_MS = 30_000;
+    private static final String SORT_ADDED = "added";
+    private static final String SORT_PING = "ping";
+    private static final String SORT_NAME = "name";
 
     private static class SubscriptionGroup {
         final String name;
@@ -224,8 +237,6 @@ public class ProxyListActivity extends BaseFragment implements NotificationCente
             checkImageView.setScaleType(ImageView.ScaleType.CENTER);
             checkImageView.setContentDescription(getString(R.string.Edit));
             addView(checkImageView, LayoutHelper.createFrame(48, 48, (LocaleController.isRTL ? Gravity.LEFT : Gravity.RIGHT) | Gravity.TOP, 8, 8, 8, 0));
-            checkImageView.setOnClickListener(v -> presentFragment(new ProxySettingsActivity(currentInfo)));
-
             checkBox = new CheckBox2(context, 21);
             checkBox.setColor(Theme.key_checkbox, Theme.key_radioBackground, Theme.key_checkboxCheck);
             checkBox.setDrawBackgroundAsArc(14);
@@ -241,22 +252,88 @@ public class ProxyListActivity extends BaseFragment implements NotificationCente
         }
 
         public void setProxy(SharedConfig.ProxyInfo proxyInfo) {
-            if (proxyInfo.isXrayVless()) {
-                String title = !TextUtils.isEmpty(proxyInfo.vlessRemark) ? proxyInfo.vlessRemark : proxyInfo.settings.getAddress() + ":" + proxyInfo.settings.getPort();
-                textView.setText(title + " (VLESS)");
-            } else if (proxyInfo.isAether()) {
-                String title = !TextUtils.isEmpty(proxyInfo.proxyName) ? proxyInfo.proxyName : "Aether";
-                String detail = !TextUtils.isEmpty(proxyInfo.aetherProtocol) ? proxyInfo.aetherProtocol.toUpperCase() : "";
-                textView.setText(title + (TextUtils.isEmpty(detail) ? " (Aether)" : " (Aether " + detail + ")"));
-            } else {
-                textView.setText(proxyInfo.settings.getType() == ProxySettings.Type.WEB
-                        ? proxyInfo.settings.getAddress() + " (WEB)"
-                        : proxyInfo.settings.getAddress() + ":" + proxyInfo.settings.getPort());
-            }
             currentInfo = proxyInfo;
+            String title;
+            if (proxyInfo.unrecognized) {
+                title = !TextUtils.isEmpty(proxyInfo.proxyName) ? proxyInfo.proxyName : getString(R.string.ProxyUnknownType);
+                textView.setText(title);
+                valueTextView.setText(getString(R.string.ProxyUnrecognizable));
+                valueTextView.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteGrayText2));
+                checkImageView.setOnClickListener(v -> Toast.makeText(getContext(), getString(R.string.ProxyUnrecognizedToast), Toast.LENGTH_SHORT).show());
+                return;
+            }
+            if (proxyInfo.isXrayVless()) {
+                title = !TextUtils.isEmpty(proxyInfo.vlessRemark) ? proxyInfo.vlessRemark : proxyInfo.settings.getAddress() + ":" + proxyInfo.settings.getPort();
+            } else if (proxyInfo.isAether()) {
+                title = !TextUtils.isEmpty(proxyInfo.proxyName) ? proxyInfo.proxyName : "Aether";
+            } else if (!TextUtils.isEmpty(proxyInfo.proxyName)) {
+                title = proxyInfo.proxyName;
+            } else {
+                title = proxyInfo.settings.getAddress() + (proxyInfo.settings.getType() == ProxySettings.Type.WEB ? "" : ":" + proxyInfo.settings.getPort());
+            }
+            textView.setText(title + getProxyTypeSuffix(proxyInfo));
+            checkImageView.setOnClickListener(v -> presentFragment(new ProxySettingsActivity(currentInfo)));
+        }
+
+        private String getProxyTypeSuffix(SharedConfig.ProxyInfo proxyInfo) {
+            if (proxyInfo == null || proxyInfo.settings == null) {
+                return "";
+            }
+            if (proxyInfo.unrecognized) {
+                return "";
+            }
+            if (proxyInfo.isAether()) {
+                String detail = !TextUtils.isEmpty(proxyInfo.aetherProtocol) ? proxyInfo.aetherProtocol.toUpperCase(Locale.US) : "";
+                return TextUtils.isEmpty(detail) ? " (Aether)" : " (Aether " + detail + ")";
+            }
+            ProxySettings.Type type = proxyInfo.settings.getType();
+            if (type == ProxySettings.Type.MTPROTO) {
+                return " (MTProto)";
+            }
+            if (type == ProxySettings.Type.SOCKS5) {
+                return " (SOCKS5)";
+            }
+            if (type == ProxySettings.Type.WEB) {
+                return " (WEB)";
+            }
+            if (proxyInfo.isXrayVless()) {
+                String protocol = "VLESS";
+                if (!TextUtils.isEmpty(proxyInfo.vlessAdvancedJson)) {
+                    try {
+                        String jsonProtocol = new org.json.JSONObject(proxyInfo.vlessAdvancedJson).optString("protocol", "");
+                        if ("vmess".equalsIgnoreCase(jsonProtocol)) {
+                            protocol = "VMess";
+                        } else if ("trojan".equalsIgnoreCase(jsonProtocol)) {
+                            protocol = "Trojan";
+                        } else if ("shadowsocks".equalsIgnoreCase(jsonProtocol)) {
+                            protocol = "SS";
+                        } else if ("socks".equalsIgnoreCase(jsonProtocol)) {
+                            protocol = "SOCKS";
+                        } else if ("http".equalsIgnoreCase(jsonProtocol)) {
+                            protocol = "HTTP";
+                        } else if ("wireguard".equalsIgnoreCase(jsonProtocol)) {
+                            protocol = "WireGuard";
+                        } else if ("hysteria2".equalsIgnoreCase(jsonProtocol) || "hy2".equalsIgnoreCase(jsonProtocol)) {
+                            protocol = "Hysteria2";
+                        } else if ("hysteria".equalsIgnoreCase(jsonProtocol)) {
+                            protocol = "Hysteria";
+                        } else if (!TextUtils.isEmpty(jsonProtocol) && !"vless".equalsIgnoreCase(jsonProtocol)) {
+                            protocol = jsonProtocol.toUpperCase(Locale.US);
+                        }
+                    } catch (Throwable ignored) {
+                    }
+                }
+                return " (" + protocol + ")";
+            }
+            return "";
         }
 
         public void updateStatus() {
+            if (currentInfo != null && currentInfo.unrecognized) {
+                valueTextView.setText(getString(R.string.ProxyUnrecognizable));
+                valueTextView.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteGrayText2));
+                return;
+            }
             int colorKey;
             if (SharedConfig.currentProxy == currentInfo && useProxySettings) {
                 if (currentConnectionState == ConnectionsManager.ConnectionStateConnected || currentConnectionState == ConnectionsManager.ConnectionStateUpdating) {
@@ -408,12 +485,12 @@ public class ProxyListActivity extends BaseFragment implements NotificationCente
 
     private class SubscriptionGroupCell extends FrameLayout {
         private final TextView titleView;
-        private final TextView intervalView;
         private final TextView announceView;
         private final TextView quotaView;
         private final TextView metaView;
         private final TextView supportButton;
         private final TextView websiteButton;
+        private final LinearLayout linksRow;
         private final ImageView menuView;
         private final ImageView pingView;
         private final ImageView refreshView;
@@ -432,16 +509,12 @@ public class ProxyListActivity extends BaseFragment implements NotificationCente
             titleView.setMaxLines(1);
             titleView.setEllipsize(TextUtils.TruncateAt.END);
             addView(titleView, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, (LocaleController.isRTL ? Gravity.RIGHT : Gravity.LEFT) | Gravity.TOP, 21, 12, 120, 0));
-
-            intervalView = new TextView(context);
-            intervalView.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 12);
-            intervalView.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteGrayText));
-            intervalView.setMaxLines(1);
-            addView(intervalView, LayoutHelper.createFrame(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, (LocaleController.isRTL ? Gravity.LEFT : Gravity.RIGHT) | Gravity.TOP, 8, 14, 8, 0));
+            titleView.setClickable(true);
+            titleView.setFocusable(true);
 
             menuView = createIcon(R.drawable.ic_ab_other, R.string.AccDescrMoreOptions);
-            pingView = createIcon(R.drawable.msg_speed, R.string.ProxySubscriptionTestPing);
-            refreshView = createIcon(R.drawable.msg_reset, R.string.Refresh);
+            pingView = createIcon(R.drawable.msg_proxy_ping, R.string.ProxySubscriptionTestPing);
+            refreshView = createIcon(R.drawable.msg_proxy_refresh, R.string.Refresh);
             collapseView = createIcon(R.drawable.arrow_more, R.string.AccDescrExpandPanel);
 
             addView(menuView, LayoutHelper.createFrame(36, 36, Gravity.TOP | (LocaleController.isRTL ? Gravity.LEFT : Gravity.RIGHT), LocaleController.isRTL ? 8 : 0, 8, LocaleController.isRTL ? 0 : 8, 0));
@@ -466,18 +539,29 @@ public class ProxyListActivity extends BaseFragment implements NotificationCente
             announceView.setEllipsize(TextUtils.TruncateAt.END);
             addView(announceView, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, (LocaleController.isRTL ? Gravity.RIGHT : Gravity.LEFT) | Gravity.TOP, 21, 72, 21, 0));
 
-            LinearLayout linksRow = new LinearLayout(context);
+            linksRow = new LinearLayout(context);
             linksRow.setOrientation(LinearLayout.HORIZONTAL);
+            int linkSelector = Theme.getColor(Theme.key_listSelector);
             supportButton = new TextView(context);
             supportButton.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 14);
             supportButton.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteBlueText4));
             supportButton.setText(getString(R.string.ProxySubscriptionSupport));
-            supportButton.setPadding(AndroidUtilities.dp(21), AndroidUtilities.dp(6), AndroidUtilities.dp(12), AndroidUtilities.dp(6));
+            supportButton.setMinHeight(AndroidUtilities.dp(36));
+            supportButton.setGravity(Gravity.CENTER_VERTICAL);
+            supportButton.setPadding(AndroidUtilities.dp(21), AndroidUtilities.dp(8), AndroidUtilities.dp(12), AndroidUtilities.dp(8));
+            supportButton.setBackground(Theme.createSelectorDrawable(linkSelector));
+            supportButton.setClickable(true);
+            supportButton.setFocusable(true);
             websiteButton = new TextView(context);
             websiteButton.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 14);
             websiteButton.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteBlueText4));
             websiteButton.setText(getString(R.string.ProxySubscriptionWebsite));
-            websiteButton.setPadding(AndroidUtilities.dp(12), AndroidUtilities.dp(6), AndroidUtilities.dp(21), AndroidUtilities.dp(6));
+            websiteButton.setMinHeight(AndroidUtilities.dp(36));
+            websiteButton.setGravity(Gravity.CENTER_VERTICAL);
+            websiteButton.setPadding(AndroidUtilities.dp(12), AndroidUtilities.dp(8), AndroidUtilities.dp(21), AndroidUtilities.dp(8));
+            websiteButton.setBackground(Theme.createSelectorDrawable(linkSelector));
+            websiteButton.setClickable(true);
+            websiteButton.setFocusable(true);
             linksRow.addView(supportButton, LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT));
             linksRow.addView(websiteButton, LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT));
             addView(linksRow, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, (LocaleController.isRTL ? Gravity.RIGHT : Gravity.LEFT) | Gravity.TOP, 0, 96, 0, 0));
@@ -485,8 +569,8 @@ public class ProxyListActivity extends BaseFragment implements NotificationCente
             metaView = new TextView(context);
             metaView.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 12);
             metaView.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteGrayText));
-            metaView.setGravity(LocaleController.isRTL ? Gravity.LEFT : Gravity.RIGHT);
-            addView(metaView, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, (LocaleController.isRTL ? Gravity.LEFT : Gravity.RIGHT) | Gravity.BOTTOM, 21, 0, 21, 10));
+            metaView.setGravity((LocaleController.isRTL ? Gravity.RIGHT : Gravity.LEFT) | Gravity.CENTER_VERTICAL);
+            addView(metaView, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, (LocaleController.isRTL ? Gravity.RIGHT : Gravity.LEFT) | Gravity.BOTTOM, 21, 0, 21, 10));
         }
 
         private ImageView createIcon(int resId, int contentDescriptionRes) {
@@ -511,12 +595,6 @@ public class ProxyListActivity extends BaseFragment implements NotificationCente
             collapseView.setRotation(collapsed ? 0f : 180f);
 
             XraySubscriptionStore.Entry entry = group != null ? findEntryForGroup(group) : null;
-            if (entry != null && entry.updateIntervalMinutes > 0) {
-                intervalView.setText(formatRefreshInterval(entry.updateIntervalMinutes));
-                intervalView.setVisibility(VISIBLE);
-            } else {
-                intervalView.setVisibility(GONE);
-            }
 
             if (entry != null && entry.total > 0) {
                 long used = entry.upload + entry.download;
@@ -550,22 +628,18 @@ public class ProxyListActivity extends BaseFragment implements NotificationCente
                 websiteButton.setVisibility(GONE);
             }
 
-            int count = group != null ? group.proxies.size() : 0;
-            if (entry != null && entry.configCount > 0) {
-                count = entry.configCount;
-            }
-            String configs = LocaleController.formatString(R.string.ProxySubscriptionConfigs, count);
-            String updated = entry != null && entry.lastUpdateTime > 0
-                    ? LocaleController.formatString(R.string.ProxySubscriptionLastUpdated, LocaleController.formatShortDate(entry.lastUpdateTime / 1000))
-                    : "";
-            metaView.setText(updated.isEmpty() ? configs : configs + " · " + updated);
+            updateMetaRow(group, entry);
+            linksRow.bringToFront();
 
-            menuView.setOnClickListener(v -> showGroupMenu(group, v));
+            menuView.setOnClickListener(v -> showSubscriptionGroupMenu(group, v));
             pingView.setOnClickListener(v -> {
                 if (group == null) {
                     return;
                 }
                 for (SharedConfig.ProxyInfo info : group.proxies) {
+                    if (info.unrecognized) {
+                        continue;
+                    }
                     info.checking = false;
                     info.availableCheckTime = 0;
                 }
@@ -574,12 +648,45 @@ public class ProxyListActivity extends BaseFragment implements NotificationCente
             });
         }
 
+        public void updateMetaRow(SubscriptionGroup group, XraySubscriptionStore.Entry entry) {
+            if (entry == null && group != null) {
+                entry = findEntryForGroup(group);
+            }
+            int count = group != null ? group.proxies.size() : 0;
+            if (entry != null && entry.configCount > 0) {
+                count = entry.configCount;
+            }
+            String countText = LocaleController.formatString(R.string.ProxySubscriptionConfigs, count);
+            String updated = entry != null && entry.lastUpdateTime > 0
+                    ? LocaleController.formatString(R.string.ProxySubscriptionLastUpdated, LocaleController.formatShortDate(entry.lastUpdateTime / 1000))
+                    : "";
+            String intervalPart = "";
+            if (entry != null && entry.autoUpdate && entry.updateIntervalMinutes > 0) {
+                intervalPart = formatRefreshInterval(entry.updateIntervalMinutes);
+            }
+            SpannableStringBuilder meta = new SpannableStringBuilder();
+            meta.append(" ");
+            meta.setSpan(new ColoredImageSpan(R.drawable.msg_proxy_server, DynamicDrawableSpan.ALIGN_CENTER), 0, 1, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+            meta.append(" ");
+            meta.append(countText);
+            if (!TextUtils.isEmpty(updated)) {
+                meta.append(" · ");
+                meta.append(updated);
+            }
+            if (!TextUtils.isEmpty(intervalPart)) {
+                meta.append(" · ");
+                meta.append(intervalPart);
+            }
+            metaView.setText(meta);
+        }
+
         public void setOnRefreshClickListener(OnClickListener listener) {
             refreshView.setOnClickListener(listener);
         }
 
         public void setOnCollapseClickListener(OnClickListener listener) {
             collapseView.setOnClickListener(listener);
+            titleView.setOnClickListener(listener);
         }
 
         private XraySubscriptionStore.Entry findEntryForGroup(SubscriptionGroup group) {
@@ -600,16 +707,6 @@ public class ProxyListActivity extends BaseFragment implements NotificationCente
                 return LocaleController.formatString(R.string.ProxySubscriptionRefreshInterval, (minutes / 60) + "h");
             }
             return LocaleController.formatString(R.string.ProxySubscriptionRefreshInterval, minutes + "m");
-        }
-
-        private void showGroupMenu(SubscriptionGroup group, View anchor) {
-            if (group == null) {
-                return;
-            }
-            ItemOptions options = ItemOptions.makeOptions(ProxyListActivity.this, anchor);
-            options.add(R.drawable.msg_delete, getString(R.string.Delete), () -> confirmDeleteSubscriptionGroup(group, getPositionForGroup(group)));
-            options.add(R.drawable.msg_reset, getString(R.string.Refresh), () -> ProxyUtil.refreshSubscriptionsByTitle(getParentActivity(), group.name));
-            options.show();
         }
 
         @Override
@@ -635,12 +732,16 @@ public class ProxyListActivity extends BaseFragment implements NotificationCente
         useProxyForCalls = preferences.getBoolean("proxy_enabled_calls", false);
 
         updateRows(true);
+        scheduleSubscriptionMetaRefresh();
 
         return true;
     }
 
     @Override
     public void onFragmentDestroy() {
+        if (subscriptionMetaRefreshRunnable != null) {
+            AndroidUtilities.cancelRunOnUIThread(subscriptionMetaRefreshRunnable);
+        }
         super.onFragmentDestroy();
         NotificationCenter.getGlobalInstance().removeObserver(this, NotificationCenter.proxyChangedByRotation);
         NotificationCenter.getGlobalInstance().removeObserver(this, NotificationCenter.proxySettingsChanged);
@@ -667,7 +768,7 @@ public class ProxyListActivity extends BaseFragment implements NotificationCente
         });
 
         ActionBarMenu menu = actionBar.createMenu();
-        ActionBarMenuItem pasteItem = menu.addItem(menu_paste_clipboard, R.drawable.msg_copy);
+        ActionBarMenuItem pasteItem = menu.addItem(menu_paste_clipboard, R.drawable.msg_paste);
         pasteItem.setContentDescription(getString(R.string.PasteFromClipboard));
         pasteItem.setOnClickListener(v -> ProxyUtil.importFromClipboard(getParentActivity()));
         ActionBarMenuItem addProxyItem = menu.addItem(menu_add_proxy, R.drawable.msg_add);
@@ -818,27 +919,13 @@ public class ProxyListActivity extends BaseFragment implements NotificationCente
                 SharedPreferences.Editor editor = MessagesController.getGlobalMainSettings().edit();
                 editor.putBoolean("proxy_enabled_calls", useProxyForCalls);
                 editor.commit();
-            } else if (isSubscriptionGroupPosition(position)) {
-                if (!canCollapseSubscriptions || !selectedItems.isEmpty()) {
-                    return;
-                }
-                SubscriptionRow row = getSubscriptionRow(position);
-                if (row == null || row.group == null) {
-                    return;
-                }
-                if (collapsedSubscriptions.contains(row.group.name)) {
-                    collapsedSubscriptions.remove(row.group.name);
-                } else {
-                    collapsedSubscriptions.add(row.group.name);
-                }
-                updateRows(true);
             } else if (isProxyPosition(position)) {
                 if (!selectedItems.isEmpty()) {
                     listAdapter.toggleSelected(position);
                     return;
                 }
                 SharedConfig.ProxyInfo info = getProxyInfoByPosition(position);
-                if (info == null) {
+                if (info == null || info.unrecognized) {
                     return;
                 }
                 useProxySettings = true;
@@ -861,8 +948,6 @@ public class ProxyListActivity extends BaseFragment implements NotificationCente
                 ConnectionsManager.setProxySettings(useProxySettings, SharedConfig.currentProxy.settings);
             } else if (position == proxyAddRow) {
                 presentFragment(new ProxySettingsActivity());
-            } else if (position == subscriptionUserAgentRow) {
-                showSubscriptionUserAgentDialog();
             } else if (position == deleteAllRow) {
                 AlertDialog.Builder builder = new AlertDialog.Builder(getParentActivity());
                 builder.setMessage(getString(R.string.DeleteAllProxiesConfirm));
@@ -1032,24 +1117,6 @@ public class ProxyListActivity extends BaseFragment implements NotificationCente
         return -1;
     }
 
-    private void showSubscriptionUserAgentDialog() {
-        if (getParentActivity() == null) {
-            return;
-        }
-        String[] options = new String[]{ProxyUtil.USER_AGENT_VXGRAM, ProxyUtil.USER_AGENT_HAPP};
-        AlertDialog.Builder builder = new AlertDialog.Builder(getParentActivity());
-        builder.setTitle(getString(R.string.ProxySubscriptionUserAgent));
-        builder.setItems(options, (dialog, which) -> {
-            ProxyUtil.setSubscriptionUserAgent(options[which]);
-            if (listAdapter != null && subscriptionUserAgentRow >= 0) {
-                listAdapter.notifyItemChanged(subscriptionUserAgentRow);
-            }
-            dialog.dismiss();
-        });
-        builder.setNegativeButton(getString(R.string.Cancel), null);
-        showDialog(builder.create());
-    }
-
     private void showAddProxyPlusDialog() {
         if (getParentActivity() == null) {
             return;
@@ -1058,11 +1125,16 @@ public class ProxyListActivity extends BaseFragment implements NotificationCente
         container.setOrientation(LinearLayout.VERTICAL);
 
         TextSettingsCell pasteCell = new TextSettingsCell(getParentActivity());
-        pasteCell.setBackground(Theme.getSelectorDrawable(true));
+        pasteCell.setBackgroundColor(Theme.getColor(Theme.key_dialogBackgroundGray));
+        pasteCell.setBackground(Theme.getSelectorDrawable(Theme.getColor(Theme.key_dialogButtonSelector)));
         pasteCell.setText(getString(R.string.PasteFromClipboard), false);
         pasteCell.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteBlueText4));
         pasteCell.setOnClickListener(v -> ProxyUtil.importFromClipboard(getParentActivity()));
-        container.addView(pasteCell, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 0, 8, 0, 0));
+        container.addView(pasteCell, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 16, 12, 16, 12));
+
+        View pasteDivider = new View(getParentActivity());
+        pasteDivider.setBackgroundColor(Theme.getColor(Theme.key_divider));
+        container.addView(pasteDivider, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, 1, 16, 0, 16, 4));
 
         FrameLayout sectionHeader = new FrameLayout(getParentActivity());
         TextView sectionTitle = new TextView(getParentActivity());
@@ -1080,19 +1152,21 @@ public class ProxyListActivity extends BaseFragment implements NotificationCente
         subscriptionForm.setOrientation(LinearLayout.VERTICAL);
         subscriptionForm.setVisibility(View.GONE);
 
-        EditTextBoldCursor remarkField = createDialogField(getString(R.string.ProxySubscriptionRemark));
-        EditTextBoldCursor urlField = createDialogField(getString(R.string.ProxySubscriptionUrl));
-        TextCheckCell autoUpdateCell = new TextCheckCell(getParentActivity());
-        autoUpdateCell.setBackgroundColor(Theme.getColor(Theme.key_windowBackgroundWhite));
-        autoUpdateCell.setTextAndCheck(getString(R.string.ProxySubscriptionAutoUpdate), true, false);
-        EditTextBoldCursor intervalField = createDialogField(getString(R.string.ProxySubscriptionUpdateInterval));
-        intervalField.setText("1440");
-        intervalField.setInputType(android.text.InputType.TYPE_CLASS_NUMBER);
+        OutlineTextContainerView remarkOutline = new OutlineTextContainerView(getParentActivity());
+        remarkOutline.setText(getString(R.string.ProxySubscriptionRemark));
+        remarkOutline.animateSelection(0f, false);
+        EditTextBoldCursor remarkField = createOutlinedField(remarkOutline, "");
+        subscriptionForm.addView(remarkOutline, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 16, 0, 16, 12));
 
-        subscriptionForm.addView(wrapDialogField(remarkField), LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 16, 0, 16, 0));
-        subscriptionForm.addView(wrapDialogField(urlField), LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 16, 0, 16, 0));
-        subscriptionForm.addView(autoUpdateCell, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
-        subscriptionForm.addView(wrapDialogField(intervalField), LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 16, 0, 16, 8));
+        OutlineTextContainerView urlOutline = new OutlineTextContainerView(getParentActivity());
+        urlOutline.setText(getString(R.string.ProxySubscriptionUrl));
+        urlOutline.animateSelection(0f, false);
+        EditTextBoldCursor urlField = createOutlinedField(urlOutline, "");
+        subscriptionForm.addView(urlOutline, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 16, 0, 16, 0));
+
+        TextCheckCell[] autoUpdateCellHolder = new TextCheckCell[1];
+        int[] selectedMinutes = new int[]{1440};
+        subscriptionForm.addView(buildScheduleSection(true, 1440, autoUpdateCellHolder, selectedMinutes), LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
         container.addView(subscriptionForm, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
 
         sectionHeader.setOnClickListener(v -> {
@@ -1109,20 +1183,13 @@ public class ProxyListActivity extends BaseFragment implements NotificationCente
             if (TextUtils.isEmpty(url)) {
                 return;
             }
-            int interval = 1440;
-            try {
-                interval = Integer.parseInt(intervalField.getText().toString().trim());
-            } catch (Exception ignored) {
-            }
-            if (interval < 15) {
-                interval = 15;
-            }
+            boolean autoUpdate = autoUpdateCellHolder[0] != null && autoUpdateCellHolder[0].isChecked();
             ProxyUtil.importSubscriptionWithOptions(
                     getParentActivity(),
                     url,
                     remarkField.getText().toString().trim(),
-                    autoUpdateCell.isChecked(),
-                    interval,
+                    autoUpdate,
+                    selectedMinutes[0],
                     true
             );
         });
@@ -1221,21 +1288,11 @@ public class ProxyListActivity extends BaseFragment implements NotificationCente
                 }
             }
 
-            boolean isChecking = checking;
-            Collections.sort(proxyList, (o1, o2) -> {
-                long bias1 = SharedConfig.currentProxy == o1 ? -200000 : 0;
-                if (!o1.available) {
-                    bias1 += 100000;
-                }
-                long bias2 = SharedConfig.currentProxy == o2 ? -200000 : 0;
-                if (!o2.available) {
-                    bias2 += 100000;
-                }
-                return Long.compare(isChecking && o1 != SharedConfig.currentProxy ? SharedConfig.proxyList.indexOf(o1) * 10000L : o1.ping + bias1,
-                        isChecking && o2 != SharedConfig.currentProxy ? SharedConfig.proxyList.indexOf(o2) * 10000L : o2.ping + bias2);
-            });
         }
 
+        if (proxyList.isEmpty()) {
+            proxyList.addAll(SharedConfig.proxyList);
+        }
         subscriptionProxyList.clear();
         manualProxyList.clear();
         for (SharedConfig.ProxyInfo info : proxyList) {
@@ -1244,6 +1301,9 @@ public class ProxyListActivity extends BaseFragment implements NotificationCente
             } else {
                 manualProxyList.add(info);
             }
+        }
+        if (notify) {
+            sortManualProxyList(checkingForManualSort());
         }
         rebuildSubscriptionRows();
 
@@ -1283,11 +1343,7 @@ public class ProxyListActivity extends BaseFragment implements NotificationCente
         }
         proxyAddRow = rowCount++;
         proxyShadowRow = rowCount++;
-        if (hasSubscriptionSection) {
-            subscriptionUserAgentRow = rowCount++;
-        } else {
-            subscriptionUserAgentRow = -1;
-        }
+        subscriptionUserAgentRow = -1;
         if (SharedConfig.currentProxy == null || TextUtils.isEmpty(SharedConfig.currentProxy.settings.getSecret())) {
             callsRow = rowCount++;
             callsDetailRow = rowCount++;
@@ -1303,6 +1359,78 @@ public class ProxyListActivity extends BaseFragment implements NotificationCente
         checkProxyList();
         if (notify && listAdapter != null) {
             listAdapter.notifyDataSetChanged();
+        }
+    }
+
+    private boolean checkingForManualSort() {
+        if (wasCheckedAllList) {
+            return false;
+        }
+        for (SharedConfig.ProxyInfo info : manualProxyList) {
+            if (info.checking || info.availableCheckTime == 0) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private void sortManualProxyList(boolean isChecking) {
+        Collections.sort(manualProxyList, (o1, o2) -> compareManualProxyOrder(o1, o2, isChecking));
+    }
+
+    private int compareManualProxyOrder(SharedConfig.ProxyInfo o1, SharedConfig.ProxyInfo o2, boolean isChecking) {
+        long bias1 = SharedConfig.currentProxy == o1 ? -200000 : 0;
+        if (!o1.available) {
+            bias1 += 100000;
+        }
+        long bias2 = SharedConfig.currentProxy == o2 ? -200000 : 0;
+        if (!o2.available) {
+            bias2 += 100000;
+        }
+        long score1 = isChecking && o1 != SharedConfig.currentProxy ? SharedConfig.proxyList.indexOf(o1) * 10000L : o1.ping + bias1;
+        long score2 = isChecking && o2 != SharedConfig.currentProxy ? SharedConfig.proxyList.indexOf(o2) * 10000L : o2.ping + bias2;
+        return Long.compare(score1, score2);
+    }
+
+    private XraySubscriptionStore.Entry getEntryForGroup(SubscriptionGroup group) {
+        if (group == null) {
+            return null;
+        }
+        if (!TextUtils.isEmpty(group.subscriptionUrl)) {
+            XraySubscriptionStore.Entry entry = XraySubscriptionStore.getByUrl(group.subscriptionUrl);
+            if (entry != null) {
+                return entry;
+            }
+        }
+        return XraySubscriptionStore.getByDisplayTitle(group.name);
+    }
+
+    private String getProxySortName(SharedConfig.ProxyInfo info) {
+        if (info == null) {
+            return "";
+        }
+        if (!TextUtils.isEmpty(info.vlessRemark)) {
+            return info.vlessRemark;
+        }
+        if (!TextUtils.isEmpty(info.proxyName)) {
+            return info.proxyName;
+        }
+        if (info.settings != null) {
+            return info.settings.getAddress();
+        }
+        return "";
+    }
+
+    private void sortSubscriptionGroupProxies(SubscriptionGroup group) {
+        if (group == null || group.proxies.isEmpty()) {
+            return;
+        }
+        XraySubscriptionStore.Entry entry = getEntryForGroup(group);
+        String mode = entry != null && !TextUtils.isEmpty(entry.sortMode) ? entry.sortMode : SORT_ADDED;
+        if (SORT_PING.equals(mode)) {
+            Collections.sort(group.proxies, (a, b) -> compareManualProxyOrder(a, b, checkingForManualSort()));
+        } else if (SORT_NAME.equals(mode)) {
+            Collections.sort(group.proxies, (a, b) -> getProxySortName(a).compareToIgnoreCase(getProxySortName(b)));
         }
     }
 
@@ -1330,7 +1458,21 @@ public class ProxyListActivity extends BaseFragment implements NotificationCente
             }
             group.proxies.add(info);
         }
+        ArrayList<SubscriptionGroup> pinnedGroups = new ArrayList<>();
+        ArrayList<SubscriptionGroup> normalGroups = new ArrayList<>();
         for (SubscriptionGroup group : subscriptionGroups) {
+            XraySubscriptionStore.Entry entry = getEntryForGroup(group);
+            if (entry != null && entry.pinned) {
+                pinnedGroups.add(group);
+            } else {
+                normalGroups.add(group);
+            }
+        }
+        subscriptionGroups.clear();
+        subscriptionGroups.addAll(pinnedGroups);
+        subscriptionGroups.addAll(normalGroups);
+        for (SubscriptionGroup group : subscriptionGroups) {
+            sortSubscriptionGroupProxies(group);
             subscriptionRows.add(SubscriptionRow.forGroup(group));
             if (!collapsedSubscriptions.contains(group.name)) {
                 for (SharedConfig.ProxyInfo proxy : group.proxies) {
@@ -1495,6 +1637,213 @@ public class ProxyListActivity extends BaseFragment implements NotificationCente
         }
     }
 
+    private void showSubscriptionGroupMenu(SubscriptionGroup group, View anchor) {
+        if (group == null) {
+            return;
+        }
+        XraySubscriptionStore.Entry entry = getEntryForGroup(group);
+        String sortMode = entry != null && !TextUtils.isEmpty(entry.sortMode) ? entry.sortMode : SORT_ADDED;
+        String subUrl = entry != null ? entry.url : group.subscriptionUrl;
+        ItemOptions options = ItemOptions.makeOptions(this, anchor);
+        options.add(R.drawable.msg_copy, getString(R.string.CopySubscriptionLink), () -> {
+            if (!TextUtils.isEmpty(subUrl)) {
+                AndroidUtilities.addToClipboard(subUrl);
+            }
+        });
+        options.add(R.drawable.msg_qrcode, getString(R.string.ShareQRCode), () -> {
+            if (!TextUtils.isEmpty(subUrl) && getParentActivity() != null) {
+                NekoProxyUtil.showQrDialog(getParentActivity(), subUrl);
+            }
+        });
+        options.add(R.drawable.msg_edit, getString(R.string.EditSubscription), () -> showEditSubscriptionDialog(group, entry));
+        options.add(R.drawable.msg_recent, getString(R.string.UpdateSchedule), () -> showUpdateScheduleDialog(group, entry));
+        options.add(R.drawable.msg_pin, getString(R.string.PinToTop), () -> {
+            if (entry == null) {
+                return;
+            }
+            entry.pinned = !entry.pinned;
+            XraySubscriptionStore.save(entry);
+            updateRows(true);
+        });
+        options.add(R.drawable.msg_delete, getString(R.string.Delete), () -> confirmDeleteSubscriptionGroup(group, getPositionForGroup(group)));
+        options.addGap();
+        options.addChecked(SORT_ADDED.equals(sortMode), getString(R.string.ProxySubscriptionSortAdded), () -> setSubscriptionSortMode(group, SORT_ADDED));
+        options.addChecked(SORT_PING.equals(sortMode), getString(R.string.ProxySubscriptionSortPing), () -> setSubscriptionSortMode(group, SORT_PING));
+        options.addChecked(SORT_NAME.equals(sortMode), getString(R.string.ProxySubscriptionSortName), () -> setSubscriptionSortMode(group, SORT_NAME));
+        options.show();
+    }
+
+    private void setSubscriptionSortMode(SubscriptionGroup group, String mode) {
+        XraySubscriptionStore.Entry entry = getEntryForGroup(group);
+        if (entry == null) {
+            return;
+        }
+        entry.sortMode = mode;
+        XraySubscriptionStore.save(entry);
+        updateRows(true);
+    }
+
+    private void showEditSubscriptionDialog(SubscriptionGroup group, XraySubscriptionStore.Entry entry) {
+        if (getParentActivity() == null) {
+            return;
+        }
+        if (entry == null) {
+            entry = getEntryForGroup(group);
+        }
+        if (entry == null) {
+            return;
+        }
+        final XraySubscriptionStore.Entry entryFinal = entry;
+        LinearLayout container = new LinearLayout(getParentActivity());
+        container.setOrientation(LinearLayout.VERTICAL);
+        container.setPadding(AndroidUtilities.dp(16), AndroidUtilities.dp(8), AndroidUtilities.dp(16), AndroidUtilities.dp(8));
+
+        OutlineTextContainerView nameOutline = new OutlineTextContainerView(getParentActivity());
+        nameOutline.setText(getString(R.string.SubscriptionName));
+        nameOutline.animateSelection(1f, false);
+        EditTextBoldCursor nameField = createOutlinedField(nameOutline, entryFinal.remark);
+        container.addView(nameOutline, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 0, 0, 0, 12));
+
+        OutlineTextContainerView urlOutline = new OutlineTextContainerView(getParentActivity());
+        urlOutline.setText(getString(R.string.ProxySubscriptionUrl));
+        urlOutline.animateSelection(1f, false);
+        EditTextBoldCursor urlField = createOutlinedField(urlOutline, entryFinal.url);
+        container.addView(urlOutline, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
+
+        AlertDialog.Builder builder = new AlertDialog.Builder(getParentActivity());
+        builder.setTitle(getString(R.string.EditSubscription));
+        builder.setView(container);
+        builder.setNegativeButton(getString(R.string.Cancel), null);
+        builder.setPositiveButton(getString(R.string.OK), (dialog, which) -> {
+            String newRemark = nameField.getText().toString().trim();
+            String newUrl = XraySubscriptionStore.normalizeUrl(urlField.getText().toString().trim());
+            if (TextUtils.isEmpty(newUrl)) {
+                return;
+            }
+            String oldUrl = entryFinal.url;
+            entryFinal.remark = newRemark;
+            entryFinal.url = newUrl;
+            if (!TextUtils.equals(oldUrl, newUrl)) {
+                XraySubscriptionStore.removeByUrl(oldUrl);
+            }
+            XraySubscriptionStore.save(entryFinal);
+            ProxyUtil.refreshSubscriptionsByTitle(getParentActivity(), entryFinal.getDisplayTitle());
+            XraySubscriptionWorkScheduler.syncAll();
+            updateRows(true);
+        });
+        showDialog(builder.create());
+    }
+
+    private void showUpdateScheduleDialog(SubscriptionGroup group, XraySubscriptionStore.Entry entry) {
+        if (getParentActivity() == null) {
+            return;
+        }
+        if (entry == null) {
+            entry = getEntryForGroup(group);
+        }
+        if (entry == null) {
+            return;
+        }
+        final XraySubscriptionStore.Entry entryFinal = entry;
+        LinearLayout container = new LinearLayout(getParentActivity());
+        container.setOrientation(LinearLayout.VERTICAL);
+
+        TextCheckCell autoUpdateCell = new TextCheckCell(getParentActivity());
+        autoUpdateCell.setBackgroundColor(Theme.getColor(Theme.key_windowBackgroundWhite));
+        autoUpdateCell.setTextAndValueAndCheck(getString(R.string.ProxySubscriptionAutomaticUpdates), getString(R.string.ProxySubscriptionAutomaticUpdatesInfo), entryFinal.autoUpdate, true, false);
+        container.addView(autoUpdateCell, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
+
+        TextView intervalLabel = new TextView(getParentActivity());
+        intervalLabel.setText(getString(R.string.ProxySubscriptionUpdateIntervalLabel));
+        intervalLabel.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 14);
+        intervalLabel.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteGrayText2));
+        intervalLabel.setPadding(AndroidUtilities.dp(21), AndroidUtilities.dp(12), AndroidUtilities.dp(21), AndroidUtilities.dp(4));
+        container.addView(intervalLabel, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
+
+        int initialIndex = entryFinal.updateIntervalMinutes == 360 ? 0 : entryFinal.updateIntervalMinutes == 720 ? 1 : 2;
+        final int[] selectedMinutes = new int[]{entryFinal.updateIntervalMinutes > 0 ? entryFinal.updateIntervalMinutes : 1440};
+        SlideChooseView intervalChoose = new SlideChooseView(getParentActivity());
+        intervalChoose.setBackgroundColor(Theme.getColor(Theme.key_windowBackgroundWhite));
+        intervalChoose.setOptions(initialIndex, "6 h", "12 h", "24 h");
+        intervalChoose.setCallback(index -> {
+            if (index == 0) {
+                selectedMinutes[0] = 360;
+            } else if (index == 1) {
+                selectedMinutes[0] = 720;
+            } else {
+                selectedMinutes[0] = 1440;
+            }
+        });
+        container.addView(intervalChoose, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 0, 0, 0, 8));
+
+        AlertDialog.Builder builder = new AlertDialog.Builder(getParentActivity());
+        builder.setTitle(getString(R.string.UpdateSchedule));
+        builder.setView(container);
+        builder.setNegativeButton(getString(R.string.Cancel), null);
+        builder.setPositiveButton(getString(R.string.Confirm), (dialog, which) -> {
+            entryFinal.autoUpdate = autoUpdateCell.isChecked();
+            entryFinal.updateIntervalMinutes = selectedMinutes[0];
+            XraySubscriptionStore.save(entryFinal);
+            XraySubscriptionWorkScheduler.syncAll();
+            updateRows(true);
+        });
+        showDialog(builder.create());
+    }
+
+    private EditTextBoldCursor createOutlinedField(OutlineTextContainerView outline, String initial) {
+        EditTextBoldCursor field = new EditTextBoldCursor(getParentActivity());
+        field.setSingleLine(true);
+        field.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 16);
+        field.setTextColor(Theme.getColor(Theme.key_dialogTextBlack));
+        field.setCursorColor(Theme.getColor(Theme.key_windowBackgroundWhiteInputFieldActivated));
+        field.setBackground(null);
+        field.setPadding(AndroidUtilities.dp(16), AndroidUtilities.dp(14), AndroidUtilities.dp(16), AndroidUtilities.dp(14));
+        if (!TextUtils.isEmpty(initial)) {
+            field.setText(initial);
+        }
+        outline.attachEditText(field);
+        field.setOnFocusChangeListener((v, hasFocus) -> outline.animateSelection(hasFocus || field.length() > 0 ? 1f : 0f, hasFocus || field.length() > 0));
+        outline.animateSelection(!TextUtils.isEmpty(initial) ? 1f : 0f, !TextUtils.isEmpty(initial));
+        outline.addView(field, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
+        return field;
+    }
+
+    private View buildScheduleSection(boolean autoUpdate, int intervalMinutes, TextCheckCell[] autoUpdateCellOut, int[] selectedMinutesOut) {
+        LinearLayout section = new LinearLayout(getParentActivity());
+        section.setOrientation(LinearLayout.VERTICAL);
+        TextCheckCell autoUpdateCell = new TextCheckCell(getParentActivity());
+        autoUpdateCell.setBackgroundColor(Theme.getColor(Theme.key_windowBackgroundWhite));
+        autoUpdateCell.setTextAndValueAndCheck(getString(R.string.ProxySubscriptionAutomaticUpdates), getString(R.string.ProxySubscriptionAutomaticUpdatesInfo), autoUpdate, true, false);
+        section.addView(autoUpdateCell, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
+        if (autoUpdateCellOut != null && autoUpdateCellOut.length > 0) {
+            autoUpdateCellOut[0] = autoUpdateCell;
+        }
+
+        TextView intervalLabel = new TextView(getParentActivity());
+        intervalLabel.setText(getString(R.string.ProxySubscriptionUpdateIntervalLabel));
+        intervalLabel.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 14);
+        intervalLabel.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteGrayText2));
+        intervalLabel.setPadding(AndroidUtilities.dp(21), AndroidUtilities.dp(12), AndroidUtilities.dp(21), AndroidUtilities.dp(4));
+        section.addView(intervalLabel, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
+
+        int initialIndex = intervalMinutes == 360 ? 0 : intervalMinutes == 720 ? 1 : 2;
+        selectedMinutesOut[0] = intervalMinutes > 0 ? intervalMinutes : 1440;
+        SlideChooseView intervalChoose = new SlideChooseView(getParentActivity());
+        intervalChoose.setBackgroundColor(Theme.getColor(Theme.key_windowBackgroundWhite));
+        intervalChoose.setOptions(initialIndex, "6 h", "12 h", "24 h");
+        intervalChoose.setCallback(index -> {
+            if (index == 0) {
+                selectedMinutesOut[0] = 360;
+            } else if (index == 1) {
+                selectedMinutesOut[0] = 720;
+            } else {
+                selectedMinutesOut[0] = 1440;
+            }
+        });
+        section.addView(intervalChoose, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 0, 0, 0, 8));
+        return section;
+    }
+
     private void confirmDeleteSubscriptionGroup(SubscriptionGroup group, int swipedPosition) {
         if (group == null) {
             updateRows(true);
@@ -1525,6 +1874,9 @@ public class ProxyListActivity extends BaseFragment implements NotificationCente
     private void checkProxyList(boolean force) {
         for (int a = 0, count = proxyList.size(); a < count; a++) {
             final SharedConfig.ProxyInfo proxyInfo = proxyList.get(a);
+            if (proxyInfo.unrecognized) {
+                continue;
+            }
             if (!isProxyVisibleForCheck(proxyInfo) && proxyInfo != SharedConfig.currentProxy) {
                 continue;
             }
@@ -1562,8 +1914,36 @@ public class ProxyListActivity extends BaseFragment implements NotificationCente
     @Override
     public void onResume() {
         super.onResume();
+        scheduleSubscriptionMetaRefresh();
         if (listAdapter != null) {
             listAdapter.notifyDataSetChanged();
+        }
+    }
+
+    private void scheduleSubscriptionMetaRefresh() {
+        if (subscriptionMetaRefreshRunnable == null) {
+            subscriptionMetaRefreshRunnable = () -> {
+                refreshVisibleSubscriptionMeta();
+                scheduleSubscriptionMetaRefresh();
+            };
+        }
+        AndroidUtilities.cancelRunOnUIThread(subscriptionMetaRefreshRunnable);
+        AndroidUtilities.runOnUIThread(subscriptionMetaRefreshRunnable, SUBSCRIPTION_META_REFRESH_MS);
+    }
+
+    private void refreshVisibleSubscriptionMeta() {
+        if (listView == null || subscriptionStartRow == -1) {
+            return;
+        }
+        for (int position = subscriptionStartRow; position < subscriptionEndRow; position++) {
+            SubscriptionRow row = getSubscriptionRow(position);
+            if (row == null || !row.isGroup || row.group == null) {
+                continue;
+            }
+            RecyclerListView.Holder holder = (RecyclerListView.Holder) listView.findViewHolderForAdapterPosition(position);
+            if (holder != null && holder.itemView instanceof SubscriptionGroupCell) {
+                ((SubscriptionGroupCell) holder.itemView).updateMetaRow(row.group, getEntryForGroup(row.group));
+            }
         }
     }
 
@@ -1707,9 +2087,7 @@ public class ProxyListActivity extends BaseFragment implements NotificationCente
                     TextSettingsCell textCell = (TextSettingsCell) holder.itemView;
                     textCell.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteBlackText));
                     if (position == proxyAddRow) {
-                        textCell.setText(getString(R.string.AddProxy), deleteAllRow != -1 || subscriptionUserAgentRow != -1);
-                    } else if (position == subscriptionUserAgentRow) {
-                        textCell.setTextAndValue(getString(R.string.ProxySubscriptionUserAgent), ProxyUtil.getSubscriptionUserAgent(), false);
+                        textCell.setText(getString(R.string.AddProxy), deleteAllRow != -1);
                     } else if (position == deleteAllRow) {
                         textCell.setTextColor(Theme.getColor(Theme.key_text_RedRegular));
                         textCell.setText(getString(R.string.DeleteAllProxies), false);
@@ -1830,7 +2208,11 @@ public class ProxyListActivity extends BaseFragment implements NotificationCente
         @Override
         public boolean isEnabled(RecyclerView.ViewHolder holder) {
             int position = holder.getAdapterPosition();
-            return position == useProxyRow || position == rotationRow || position == callsRow || position == proxyAddRow || position == subscriptionUserAgentRow || position == deleteAllRow || isSubscriptionGroupPosition(position) || isProxyPosition(position);
+            if (isProxyPosition(position)) {
+                SharedConfig.ProxyInfo info = getProxyInfoByPosition(position);
+                return info != null && !info.unrecognized;
+            }
+            return position == useProxyRow || position == rotationRow || position == callsRow || position == proxyAddRow || position == subscriptionUserAgentRow || position == deleteAllRow;
         }
 
         @Override

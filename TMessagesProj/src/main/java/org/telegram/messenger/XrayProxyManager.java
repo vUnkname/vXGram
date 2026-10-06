@@ -26,7 +26,7 @@ import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.net.URL;
 import java.security.MessageDigest;
-import java.util.Locale;
+import java.util.concurrent.TimeUnit;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
@@ -45,6 +45,7 @@ public class XrayProxyManager {
     private static final Object sync = new Object();
     private static Process xrayProcess;
     private static String lastConfigHash;
+    private static String lastStartedKey;
     private static boolean starting;
     private static volatile ProgressListener progressListener;
     private static volatile int state = STATE_IDLE;
@@ -122,6 +123,7 @@ public class XrayProxyManager {
         synchronized (sync) {
             stopProcessInternal();
             lastConfigHash = null;
+            lastStartedKey = null;
             starting = false;
         }
         resetState();
@@ -196,8 +198,13 @@ public class XrayProxyManager {
             markFailed("missing VLESS id");
             return;
         }
+        String startKey = proxyStartKey(info);
         synchronized (sync) {
             if (starting) {
+                return;
+            }
+            if (xrayProcess != null && xrayProcess.isAlive() && TextUtils.equals(lastStartedKey, startKey) && canConnect(150)) {
+                markRunning();
                 return;
             }
             starting = true;
@@ -232,6 +239,9 @@ public class XrayProxyManager {
                 markFailed("binary not executable");
                 return;
             }
+            stopProcessInternal();
+            AetherProxyManager.stopProcess();
+            waitForLocalSocksPorts();
             if (!selectLocalSocksPort()) {
                 markFailed("local SOCKS ports busy");
                 return;
@@ -241,12 +251,6 @@ public class XrayProxyManager {
             if (BuildVars.LOGS_ENABLED) {
                 FileLog.d("Xray: config hash=" + configHash);
             }
-            if (xrayProcess != null && xrayProcess.isAlive() && TextUtils.equals(lastConfigHash, configHash)) {
-                return;
-            }
-            stopProcessInternal();
-            // Never run two engines at once.
-            AetherProxyManager.stopProcess();
             File configFile = new File(xrayDir, "config.json");
             writeConfig(configFile, config);
             ProcessBuilder builder = new ProcessBuilder(binFile.getAbsolutePath(), "run", "-c", configFile.getAbsolutePath());
@@ -254,6 +258,7 @@ public class XrayProxyManager {
             builder.redirectErrorStream(true);
             xrayProcess = builder.start();
             lastConfigHash = configHash;
+            lastStartedKey = startKey;
             startLogReader(xrayProcess.getInputStream());
         } catch (Exception e) {
             markFailed(e.getMessage());
@@ -275,12 +280,42 @@ public class XrayProxyManager {
         if (xrayProcess != null) {
             try {
                 xrayProcess.destroy();
+                if (Build.VERSION.SDK_INT >= 26) {
+                    if (!xrayProcess.waitFor(1500, TimeUnit.MILLISECONDS)) {
+                        xrayProcess.destroyForcibly();
+                        xrayProcess.waitFor(500, TimeUnit.MILLISECONDS);
+                    }
+                } else {
+                    xrayProcess.waitFor();
+                }
             } catch (Exception ignored) {
             }
             xrayProcess = null;
         }
+        lastConfigHash = null;
+        lastStartedKey = null;
         activeSocksPort = PRIMARY_SOCKS_PORT;
         setState(STATE_IDLE, null);
+    }
+
+    private static String proxyStartKey(SharedConfig.ProxyInfo info) {
+        if (info == null || info.settings == null) {
+            return "";
+        }
+        return info.settings.getAddress() + ":" + info.settings.getPort() + "|"
+                + info.vlessId + "|"
+                + info.vlessRawQuery + "|"
+                + info.vlessAdvancedJson;
+    }
+
+    private static void waitForLocalSocksPorts() {
+        long deadline = SystemClock.elapsedRealtime() + 2000;
+        while (SystemClock.elapsedRealtime() < deadline) {
+            if (!isPortBusy(PRIMARY_SOCKS_PORT) || !isPortBusy(FALLBACK_SOCKS_PORT)) {
+                return;
+            }
+            SystemClock.sleep(50);
+        }
     }
 
     private static boolean selectLocalSocksPort() {
@@ -662,13 +697,48 @@ public class XrayProxyManager {
             header.put("type", info.vlessHeaderType);
             tcp.put("header", header);
             stream.put("tcpSettings", tcp);
+        } else if ("xhttp".equals(network) || "splithttp".equals(network) || "httpupgrade".equals(network)) {
+            JSONObject xhttp = new JSONObject();
+            if (!TextUtils.isEmpty(info.vlessPath)) {
+                xhttp.put("path", info.vlessPath);
+            }
+            if (!TextUtils.isEmpty(info.vlessHost)) {
+                xhttp.put("host", info.vlessHost);
+            }
+            if (!TextUtils.isEmpty(info.vlessMode)) {
+                xhttp.put("mode", info.vlessMode);
+            }
+            if (!TextUtils.isEmpty(info.vlessAdvancedJson)) {
+                try {
+                    JSONObject extra = new JSONObject(info.vlessAdvancedJson);
+                    if (!extra.has("protocol") && !extra.has("streamSettings")) {
+                        mergeInto(xhttp, extra);
+                    }
+                } catch (Exception ignored) {
+                }
+            }
+            stream.put("xhttpSettings", xhttp);
         }
 
             outbound.put("streamSettings", stream);
-            applyAdvancedJson(outbound, stream, info.vlessAdvancedJson);
+            if (!isXhttpExtraOnly(info.vlessAdvancedJson)) {
+                applyAdvancedJson(outbound, stream, info.vlessAdvancedJson);
+            }
         }
         root.put("outbounds", new JSONArray().put(outbound));
         return root.toString();
+    }
+
+    private static boolean isXhttpExtraOnly(String advancedJson) {
+        if (TextUtils.isEmpty(advancedJson)) {
+            return false;
+        }
+        try {
+            JSONObject extra = new JSONObject(advancedJson);
+            return !extra.has("protocol") && !extra.has("streamSettings") && !extra.has("settings");
+        } catch (Exception e) {
+            return false;
+        }
     }
 
     private static boolean isGenericXrayOutbound(SharedConfig.ProxyInfo info) {
