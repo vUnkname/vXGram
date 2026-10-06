@@ -4,6 +4,7 @@ import java.lang.reflect.*;
 
 
 /** @deprecated Internal use in proxy.pxi */
+@Deprecated
 public class PyInvocationHandler implements InvocationHandler {
     private PyObject type;
     private PyObject dict;

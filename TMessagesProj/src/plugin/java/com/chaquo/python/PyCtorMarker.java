@@ -4,5 +4,6 @@ package com.chaquo.python;
  * invoked when the construction was Python-initiated.
  *
  * @deprecated Internal use in python.pxi */
+@Deprecated
 public class PyCtorMarker {
 }

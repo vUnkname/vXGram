@@ -1,18 +1,18 @@
 # Manual vXGram build: normal + plugin staging APKs (per-ABI; normal also includes universal).
-# Runs entirely on GitHub Actions — no local JDK required.
+# Successful builds publish APKs to GitHub Releases unless skip_release is set.
 name: vXGram build
 
 on:
   workflow_dispatch:
     inputs:
-      publish_release:
-        description: 'Upload APKs to a GitHub Release (requires contents: write)'
+      skip_release:
+        description: "Skip GitHub Release (APKs still upload as Actions artifacts)"
         type: boolean
         default: false
       release_tag:
-        description: 'Release tag (used when publish_release is true)'
+        description: "Override release tag (default: v{APP_VERSION_NAME}-vX.{VX_VERSION_NAME})"
         required: false
-        default: ''
+        default: ""
 
 permissions:
   contents: write
@@ -32,34 +32,42 @@ jobs:
     timeout-minutes: 360
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           submodules: recursive
+
+      - name: Read version
+        run: |
+          APP_VERSION_NAME=$(grep -E '^APP_VERSION_NAME=' gradle.properties | cut -d= -f2 | tr -d ' \r')
+          VX_VERSION_NAME=$(grep -E '^VX_VERSION_NAME=' gradle.properties | cut -d= -f2 | tr -d ' \r')
+          echo "APP_VERSION_NAME=$APP_VERSION_NAME" >> "$GITHUB_ENV"
+          echo "VX_VERSION_NAME=$VX_VERSION_NAME" >> "$GITHUB_ENV"
+          echo "Default release tag: v${APP_VERSION_NAME}-vX.${VX_VERSION_NAME}"
 
       - name: Set up JDK 21
         uses: actions/setup-java@v5
         with:
           distribution: temurin
-          java-version: '21'
+          java-version: "21"
 
       - name: Set up Ccache
-        uses: hendrikmuhs/ccache-action@v1.2
+        uses: hendrikmuhs/ccache-action@v1.2.16
         with:
           append-timestamp: false
 
       - name: Set up Gradle
-        uses: gradle/actions/setup-gradle@v4
+        uses: gradle/actions/setup-gradle@v5
         with:
           cache-disabled: true
 
       - name: Set up Gradle cache
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: ~/.gradle
           key: gradle-${{ hashFiles('**/*.gradle*', 'gradle.properties') }}
 
       - name: Cache Xray-core downloads
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: TMessagesProj/build/xray
           key: xray-${{ env.XRAY_VERSION }}-${{ hashFiles('TMessagesProj/build.gradle') }}
@@ -73,9 +81,9 @@ jobs:
           packages: "build-tools;36.0.0 ndk;27.2.12479018 platforms;android-36"
 
       - name: Set up Python (Chaquopy bridge source build)
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
-          python-version: '3.11.9'
+          python-version: "3.11.9"
 
       - name: Install Cython (Chaquopy bridge source build)
         run: pip install Cython==3.0.11
@@ -119,20 +127,15 @@ jobs:
             -keyalg RSA -keysize 2048 -validity 10000
 
       - name: Build vXGram APKs
-        uses: nick-invision/retry@v3
         env:
           LOCAL_PROPERTIES: ${{ secrets.LOCAL_PROPERTIES }}
           BUILD_TIMESTAMP: ${{ github.run_number }}
           COMMIT_ID: ${{ github.sha }}
           XRAY_VERSION: ${{ env.XRAY_VERSION }}
           GITHUB_TOKEN: ${{ github.token }}
-        with:
-          timeout_minutes: 360
-          max_attempts: 1
-          retry_on: error
-          command: |
-            chmod +x gradlew
-            ./gradlew TMessagesProj:assembleStaging --stacktrace
+        run: |
+          chmod +x gradlew
+          ./gradlew TMessagesProj:assembleStaging --stacktrace
 
       - name: List APK outputs
         run: |
@@ -140,26 +143,29 @@ jobs:
           find TMessagesProj/build/outputs/apk/plugin/staging -name '*.apk' -exec ls -la {} \;
 
       - name: Upload normal APK artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: vXGram-normal-apks-${{ github.sha }}
           path: TMessagesProj/build/outputs/apk/normal/staging/*.apk
           if-no-files-found: error
 
       - name: Upload plugin APK artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: vXGram-plugin-apks-${{ github.sha }}
           path: TMessagesProj/build/outputs/apk/plugin/staging/*.apk
           if-no-files-found: error
 
       - name: Publish GitHub Release
-        if: inputs.publish_release
+        if: ${{ github.event_name != 'workflow_dispatch' || inputs.skip_release != true }}
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ inputs.release_tag != '' && inputs.release_tag || format('vxgram-{0}', github.sha) }}
-          name: vXGram build ${{ github.sha }}
+          tag_name: ${{ inputs.release_tag != '' && inputs.release_tag || format('v{0}-vX.{1}', env.APP_VERSION_NAME, env.VX_VERSION_NAME) }}
+          name: vXGram ${{ env.APP_VERSION_NAME }}-vX.${{ env.VX_VERSION_NAME }}
           files: |
             TMessagesProj/build/outputs/apk/normal/staging/*.apk
             TMessagesProj/build/outputs/apk/plugin/staging/*.apk
           generate_release_notes: true
+          make_latest: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
